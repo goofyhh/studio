@@ -44,16 +44,16 @@ export function AdminSupervisorDashboard() {
             <ActionCard
               title="Create Users"
               description="Add new employee accounts to the system."
-              href="#" // Placeholder link, page not yet created
-              icon={UserPlus}
-              disabled // Disabled until functionality is implemented
+              href="#" 
+              icon={Users} // Changed from UserPlus to Users
+              disabled 
             />
           </>
         )}
          <ActionCard
             title="Manage Users"
             description="View and manage employee records (mock)."
-            href="#" // Placeholder link
+            href="#" 
             icon={Users}
             disabled
         />
@@ -88,3 +88,4 @@ function ActionCard({ title, description, href, icon: Icon, disabled }: ActionCa
     </Card>
   );
 }
+
