@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const MOCK_BRANCHES = ["Main Street", "Downtown", "Westside", "North End", "South Park"];
-const MOCK_ADMIN_PASSWORD = "admin"; // In a real app, this would be secure
+const MOCK_ADMIN_PASSWORD = "0000"; // Changed from "admin"
 
 export function BranchSelector() {
   const { branch: currentBranch, setBranch, user } = useAppContext();

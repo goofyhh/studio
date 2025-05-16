@@ -53,7 +53,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const login = (role: UserRole, identifier?: string) => {
     let userName = "User";
     if (role === "Kiosk") userName = `Kiosk User (${identifier || "N/A"})`;
-    if (role === "Administrator") userName = "Admin User";
+    if (role === "Administrator") userName = "admin"; // Changed from "Admin User"
     if (role === "Supervisor") userName = "Supervisor User";
     
     const newUser = { name: userName, role };
