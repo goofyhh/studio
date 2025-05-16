@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { UserRole } from '@/contexts/AppContext';
@@ -25,18 +26,32 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock authentication
-    if (role === 'Kiosk' && !identifier) {
-      toast({ title: "Error", description: "Please enter an Employee Code.", variant: "destructive" });
-      return;
-    }
-    if ((role === 'Administrator' || role === 'Supervisor') && (!identifier || !password)) {
-       toast({ title: "Error", description: "Please enter Username and Password.", variant: "destructive" });
-      return;
+    
+    if (role === 'Kiosk') {
+      if (!identifier) {
+        toast({ title: "Error", description: "Please enter an Employee Code.", variant: "destructive" });
+        return;
+      }
+    } else if (role === 'Administrator') {
+      if (!identifier || !password) {
+        toast({ title: "Error", description: "Please enter Username and Password.", variant: "destructive" });
+        return;
+      }
+      // Specific credential check for Administrator
+      if (identifier.toLowerCase() !== 'admin' || password !== '0000') {
+        toast({ title: "Error", description: "Invalid username or password.", variant: "destructive" });
+        return;
+      }
+    } else if (role === 'Supervisor') {
+      if (!identifier || !password) {
+         toast({ title: "Error", description: "Please enter Username and Password.", variant: "destructive" });
+        return;
+      }
+      // Supervisor logs in with any non-empty username/password (mock authentication)
     }
 
     login(role, identifier);
-    toast({ title: "Login Successful", description: `Welcome, ${role}!` });
+    toast({ title: "Login Successful", description: `Welcome!` }); // Simplified welcome message
     if (onLoginSuccess) {
       onLoginSuccess();
     }
@@ -68,6 +83,7 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
                   placeholder="Enter your code"
                   required
                   className="pl-10"
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -85,6 +101,7 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
                     placeholder="Enter your username"
                     required
                     className="pl-10"
+                    autoComplete="username"
                   />
                 </div>
               </div>
@@ -100,6 +117,7 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
                     placeholder="Enter your password"
                     required
                     className="pl-10"
+                    autoComplete="current-password"
                   />
                 </div>
               </div>
