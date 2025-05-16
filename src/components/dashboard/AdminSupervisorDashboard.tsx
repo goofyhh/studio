@@ -1,10 +1,11 @@
+
 "use client";
 
 import Link from 'next/link';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Settings, Users, ArrowRight } from 'lucide-react';
+import { FileText, Settings, Users, ArrowRight, UserPlus } from 'lucide-react';
 
 export function AdminSupervisorDashboard() {
   const { user, branch } = useAppContext();
@@ -28,17 +29,26 @@ export function AdminSupervisorDashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <ActionCard
           title="View Reports"
-          description="Access and generate clock-in/out reports."
+          description="Access and generate employee clock-in/out reports."
           href="/app/reports"
           icon={FileText}
         />
         {user.role === 'Administrator' && (
-          <ActionCard
-            title="System Settings"
-            description="Configure kiosk branches and other system settings."
-            href="/app/settings"
-            icon={Settings}
-          />
+          <>
+            <ActionCard
+              title="Manage Kiosks & Branches"
+              description="Configure kiosk branches and set up new kiosk locations."
+              href="/app/settings"
+              icon={Settings}
+            />
+            <ActionCard
+              title="Create Users"
+              description="Add new employee accounts to the system."
+              href="#" // Placeholder link, page not yet created
+              icon={UserPlus}
+              disabled // Disabled until functionality is implemented
+            />
+          </>
         )}
          <ActionCard
             title="Manage Users"
