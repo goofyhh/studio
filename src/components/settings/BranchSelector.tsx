@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -27,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const MOCK_BRANCHES = [
+export const MOCK_BRANCHES = [
   "PB Boggiani",
   "PB Remanso",
   "PB Villa Hayes",
