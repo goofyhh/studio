@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, FileText, Settings, HardHat } from 'lucide-react'; // Replaced Building with HardHat
+import { LayoutDashboard, FileText, Settings, Users, HardHat } from 'lucide-react'; // Added Users icon
 
 interface NavItem {
   href: string;
@@ -18,6 +19,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Administrator', 'Supervisor', 'Kiosk'] },
   { href: '/app/reports', label: 'Reports', icon: FileText, roles: ['Administrator', 'Supervisor'] },
+  { href: '/app/manage-users', label: 'Manage Users', icon: Users, roles: ['Administrator'] },
   { href: '/app/settings', label: 'Settings', icon: Settings, roles: ['Administrator'] },
 ];
 
