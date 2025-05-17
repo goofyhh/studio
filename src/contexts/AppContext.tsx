@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -52,9 +53,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (role: UserRole, identifier?: string) => {
     let userName = "User";
-    if (role === "Kiosk") userName = `Kiosk User (${identifier || "N/A"})`;
-    if (role === "Administrator") userName = "admin"; // Changed from "Admin User"
-    if (role === "Supervisor") userName = "Supervisor User";
+    if (role === "Kiosk") {
+      userName = identifier ? `Kiosk User (${identifier})` : "Kiosk Station";
+    } else if (role === "Administrator") {
+      userName = "admin";
+    } else if (role === "Supervisor") {
+      userName = "Supervisor User";
+    }
     
     const newUser = { name: userName, role };
     setUser(newUser);
@@ -69,10 +74,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    // setBranch(null); // Decide if branch should be cleared on logout
+    setBranch(null); // Clear branch state
     try {
       localStorage.removeItem("timekeeper_auth");
-      // localStorage.removeItem("timekeeper_branch");
+      localStorage.removeItem("timekeeper_branch"); // Clear branch from localStorage
     } catch (error) {
       console.error("Failed to clear localStorage", error);
     }
@@ -101,3 +106,4 @@ export const useAppContext = () => {
   }
   return context;
 };
+

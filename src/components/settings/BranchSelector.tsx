@@ -41,7 +41,7 @@ export const MOCK_BRANCHES = [
   "PS Benjamin",
   "CO San Lorenzo"
 ];
-const MOCK_ADMIN_PASSWORD = "0000"; 
+export const MOCK_ADMIN_PASSWORD = "0000"; // Export this
 
 export function BranchSelector() {
   const { branch: currentBranch, setBranch, user } = useAppContext();

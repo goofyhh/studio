@@ -5,16 +5,31 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCog, Users, HardHat } from 'lucide-react'; 
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { UserCog, Users, HardHat, KeyRound, Building2 as BuildingIcon } from 'lucide-react'; 
 import { siteConfig } from '@/config/site';
 import { LoginForm } from './LoginForm';
 import type { UserRole } from '@/contexts/AppContext';
 import { useAppContext } from '@/contexts/AppContext';
+import { MOCK_BRANCHES, MOCK_ADMIN_PASSWORD } from '@/components/settings/BranchSelector';
+import { useToast } from '@/hooks/use-toast';
 
 export function LoginScreen() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const { user, branch, isLoading: appContextIsLoading, isAuthenticated } = useAppContext();
+  const { user, branch, login, setBranch: setAppContextBranch, isLoading: appContextIsLoading, isAuthenticated } = useAppContext();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const [kioskSelectedBranch, setKioskSelectedBranch] = useState<string>('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
 
   if (appContextIsLoading) {
     return (
@@ -25,9 +40,32 @@ export function LoginScreen() {
     );
   }
 
+  const handleKioskBranchConfirm = () => {
+    if (!kioskSelectedBranch) {
+      toast({ title: "Error", description: "Please select a branch for the kiosk.", variant: "destructive" });
+      return;
+    }
+    if (!adminConfirmPassword) {
+      toast({ title: "Error", description: "Please enter the administrator password.", variant: "destructive" });
+      return;
+    }
+    if (adminConfirmPassword !== MOCK_ADMIN_PASSWORD) {
+      toast({ title: "Authentication Failed", description: "Incorrect administrator password.", variant: "destructive" });
+      setAdminConfirmPassword(''); // Clear password field
+      return;
+    }
+
+    login('Kiosk'); // Log in as "Kiosk Station"
+    setAppContextBranch(kioskSelectedBranch); // Set the branch in context
+    toast({ title: "Kiosk Configured", description: `Kiosk set to branch: ${kioskSelectedBranch}.` });
+    setAdminConfirmPassword(''); // Clear password field
+    setSelectedRole(null); // Reset role selection
+    router.push('/app/dashboard');
+  };
+
   if (selectedRole) {
     if (selectedRole === 'Kiosk') {
-      // If Kiosk role is selected, check if we can redirect immediately
+      // If Kiosk role is selected, check if already authenticated and branch is set
       if (isAuthenticated && user?.role === 'Kiosk' && branch) {
         router.push('/app/dashboard');
         return ( // Show a message while redirecting
@@ -37,17 +75,57 @@ export function LoginScreen() {
           </div>
         );
       }
-      // If not redirecting, show the Kiosk login form (to enter employee code)
+      // If not redirecting (i.e., Kiosk not set up or first time), show Kiosk branch setup UI
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-background p-4">
-          <LoginForm role={selectedRole} onLoginSuccess={() => setSelectedRole(null)} />
-          <Button variant="link" onClick={() => setSelectedRole(null)} className="mt-6 text-sm">
+          <Card className="w-full max-w-md shadow-xl">
+            <CardHeader className="text-center">
+              <BuildingIcon className="mx-auto h-10 w-10 text-primary mb-2" />
+              <CardTitle className="text-2xl font-bold">Kiosk Setup</CardTitle>
+              <CardDescription>Select a branch and confirm with an administrator password.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="kioskBranchSelect">Branch</Label>
+                <Select value={kioskSelectedBranch} onValueChange={setKioskSelectedBranch}>
+                  <SelectTrigger id="kioskBranchSelect" className="w-full">
+                    <SelectValue placeholder="Select a branch for this kiosk" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOCK_BRANCHES.map((b) => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                    {MOCK_BRANCHES.length === 0 && <SelectItem value="nobranches" disabled>No branches configured</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminConfirmPasswordKiosk">Administrator Password</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    id="adminConfirmPasswordKiosk" 
+                    type="password" 
+                    value={adminConfirmPassword} 
+                    onChange={(e) => setAdminConfirmPassword(e.target.value)} 
+                    placeholder="Enter admin password"
+                    className="pl-10"
+                    autoComplete="current-password" // good for password managers, but might be off for kiosk
+                  />
+                </div>
+              </div>
+              <Button onClick={handleKioskBranchConfirm} className="w-full text-lg py-3">
+                Confirm & Start Kiosk Mode
+              </Button>
+            </CardContent>
+          </Card>
+          <Button variant="link" onClick={() => {setSelectedRole(null); setKioskSelectedBranch(''); setAdminConfirmPassword('');}} className="mt-6 text-sm text-muted-foreground">
             Back to role selection
           </Button>
         </div>
       );
     }
-    // For Administrator or Supervisor, always show their login form
+    // For Administrator or Supervisor, show their respective login form
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-background p-4">
         <LoginForm role={selectedRole} onLoginSuccess={() => setSelectedRole(null)} />
@@ -100,3 +178,4 @@ export function LoginScreen() {
     </div>
   );
 }
+
