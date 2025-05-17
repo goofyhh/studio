@@ -39,26 +39,37 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
   const [loginCode, setLoginCode] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<string | undefined>(undefined);
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
+  const [salaryPerHour, setSalaryPerHour] = useState(''); // New state for salary
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !surname || !loginCode || !selectedPosition || !selectedBranch) {
+    if (!name || !surname || !loginCode || !selectedPosition || !selectedBranch || !salaryPerHour) {
       toast({
         title: 'Error',
-        description: 'All fields are required.',
+        description: 'All fields are required, including salary per hour.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const salary = parseFloat(salaryPerHour);
+    if (isNaN(salary) || salary <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid positive number for salary per hour.',
         variant: 'destructive',
       });
       return;
     }
 
+
     // Mock user creation
-    const newUser = { name, surname, loginCode, position: selectedPosition, branch: selectedBranch };
+    const newUser = { name, surname, loginCode, position: selectedPosition, branch: selectedBranch, salaryPerHour: salary };
     console.log('Creating new user:', newUser);
 
     toast({
       title: 'User Created (Mock)',
-      description: `${name} ${surname} has been added with login code ${loginCode}.`,
+      description: `${name} ${surname} has been added with login code ${loginCode} and salary Gs. ${salary}/hr.`,
     });
 
     // Reset form
@@ -67,6 +78,7 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
     setLoginCode('');
     setSelectedPosition(undefined);
     setSelectedBranch(undefined);
+    setSalaryPerHour(''); // Reset salary field
 
     if (onUserCreated) {
       onUserCreated();
@@ -120,6 +132,18 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
             {branches.length === 0 && <SelectItem value="nobranch" disabled>No branches available</SelectItem>}
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="salaryPerHour">Salary per Hour (Gs.)</Label>
+        <Input 
+          id="salaryPerHour" 
+          type="number" 
+          value={salaryPerHour} 
+          onChange={(e) => setSalaryPerHour(e.target.value)} 
+          placeholder="e.g., 15000" 
+          min="0"
+        />
+        <p className="text-xs text-muted-foreground">Enter the hourly wage in Guaranies.</p>
       </div>
       <div className="flex justify-end space-x-2 pt-4">
          <SheetClose asChild>
