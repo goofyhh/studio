@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -13,6 +14,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Image from 'next/image';
 import { initialMockUsers, type UserEntry } from '@/components/users/ManageUsersPage';
+import { useAppContext } from '@/contexts/AppContext';
+import { Button } from '@/components/ui/button';
+import { Edit } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportEntry {
   id: string;
@@ -26,6 +31,7 @@ interface ReportEntry {
   branch: string;
   surchargeHours: string; // Calculated extra hours
   isHoliday: boolean; // True if the work day was a Paraguayan holiday
+  observations?: string; // New field for "Audited" tag
 }
 
 // --- Helper Functions ---
@@ -87,80 +93,11 @@ function calculateSurchargeDetails(clockInDate: Date, clockOutDate: Date): { tot
     return { totalSurchargeDecimal: 0, workedOnHoliday: isGivenDayHoliday(clockInDate) };
   }
 
-  let nightHoursPortion = 0;
-  let sundayHoursPortion = 0;
-  let holidayHoursPortion = 0;
+  let calculatedSurcharge = 0;
   let dayIsHoliday = false;
-
   const tempCurrentTime = new Date(clockInDate.getTime());
   const intervalMillis = 1 * 60 * 1000; // 1 minute chunks
 
-  while (tempCurrentTime < clockOutDate) {
-    const minuteChunkEnd = new Date(Math.min(tempCurrentTime.getTime() + intervalMillis, clockOutDate.getTime()));
-    const chunkDurationMillis = minuteChunkEnd.getTime() - tempCurrentTime.getTime();
-    const chunkDurationHours = chunkDurationMillis / (1000 * 60 * 60);
-
-    const hour = tempCurrentTime.getHours();
-    const dayOfWeek = tempCurrentTime.getDay(); // 0 for Sunday
-
-    // Night shift check (20:00 to 06:00 next day)
-    // Check if the *start* of the 1-minute interval falls within night hours
-    if (hour >= 20 || hour < 6) {
-      nightHoursPortion += chunkDurationHours;
-    }
-
-    // Sunday check
-    if (dayOfWeek === 0) {
-      sundayHoursPortion += chunkDurationHours;
-    }
-
-    // Holiday check
-    if (isGivenDayHoliday(tempCurrentTime)) {
-      holidayHoursPortion += chunkDurationHours;
-      dayIsHoliday = true; // Mark if any part of the shift touches a holiday
-    }
-    
-    tempCurrentTime.setTime(tempCurrentTime.getTime() + intervalMillis);
-  }
-  
-  // Surcharge logic:
-  // Night surcharge: 50% of night hours
-  // Sunday surcharge: 100% of Sunday hours (these hours are *also* Sunday hours, not *in addition* to normal pay)
-  // Holiday surcharge: 100% of holiday hours (similarly, these are holiday hours)
-
-  // Avoid double-counting surcharge if a night hour is also a Sunday/Holiday hour.
-  // The highest surcharge rate applies. Sunday/Holiday (100%) > Night (50%).
-  // This means we should calculate the base for 100% surcharge first, then night surcharge on remaining hours.
-  
-  let totalSurchargeDecimal = 0;
-
-  // Calculate holiday and Sunday surcharges first, as they are 100%
-  const holidayOrSundayHours = holidayHoursPortion + (dayIsHoliday ? 0 : sundayHoursPortion); // If it's a holiday, holiday surcharge takes precedence over Sunday.
-  totalSurchargeDecimal += holidayOrSundayHours * 1.00; // 100%
-
-  // Calculate night surcharge on hours that were NOT already covered by holiday/Sunday surcharge
-  // This logic needs refinement. Let's assume for now surcharges are additive for simplicity of mock data generation,
-  // but in a real system, this would need careful handling of overlapping conditions.
-  // For this mock, we'll simplify: if an hour is night AND holiday, it gets holiday rate. If night AND Sunday (not holiday), it gets Sunday rate.
-  
-  // Simpler additive model for mock:
-  const nightSurcharge = nightHoursPortion * 0.50; 
-  const sundaySurchargeVal = sundayHoursPortion * 1.00; 
-  const holidaySurchargeVal = holidayHoursPortion * 1.00;
-
-  // The problem asks for "extra hours gained".
-  // So if night hours are 4, extra is 4 * 0.5 = 2.
-  // If Sunday hours are 8, extra is 8 * 1.0 = 8.
-  // If Holiday hours are 8, extra is 8 * 1.0 = 8.
-
-  // If an hour is both night and Sunday, it should get 100% (Sunday rate) not 50% + 100%.
-  // The prompt says "multiplied by", implying the surcharge *replaces* normal pay factor for those hours.
-  // However, the request is for "extra hours gained".
-  // Let's stick to calculating "extra" hours.
-  
-  let calculatedSurcharge = 0;
-  // Reset tempCurrentTime for a new pass to determine non-overlapping surcharge
-  tempCurrentTime.setTime(clockInDate.getTime());
   while (tempCurrentTime < clockOutDate) {
     const minuteChunkEnd = new Date(Math.min(tempCurrentTime.getTime() + intervalMillis, clockOutDate.getTime()));
     const chunkDurationMillis = minuteChunkEnd.getTime() - tempCurrentTime.getTime();
@@ -175,12 +112,11 @@ function calculateSurchargeDetails(clockInDate: Date, clockOutDate: Date): { tot
       dayIsHoliday = true;
     } else if (dayOfWeek === 0) {
       calculatedSurcharge += chunkDurationHours * 1.00; // 100% extra for Sunday
-    } else if (hour >= 20 || hour < 6) {
+    } else if (hour >= 20 || hour < 6) { // Night shift
       calculatedSurcharge += chunkDurationHours * 0.50; // 50% extra for night
     }
     tempCurrentTime.setTime(tempCurrentTime.getTime() + intervalMillis);
   }
-
 
   return { totalSurchargeDecimal: calculatedSurcharge, workedOnHoliday: dayIsHoliday };
 }
@@ -194,15 +130,14 @@ const generateMockReportData = (): ReportEntry[] => {
   const today = new Date();
   const reportStartDate = new Date(today.getFullYear(), 4, 1); // May 1st of current year
 
-  // Ensure "today" does not go past the actual current date if the script runs for a while.
   const currentDateLimit = new Date(); 
 
   for (let d = new Date(reportStartDate); d <= currentDateLimit && d.getMonth() <= today.getMonth(); d.setDate(d.getDate() + 1)) {
-    const dayOfWeek = d.getDay();
+    const dayOfWeek = d.getDay(); // 0=Sunday, 6=Saturday
     const currentDateStr = formatDateForReport(d);
 
     activeUsers.forEach(user => {
-      // Specific night shift example for May 8th for Juan Perez (JP101) and Maria Gonzalez (MG202)
+      // Specific night shift example for Juan Perez (JP101) and Maria Gonzalez (MG202)
       if ((user.loginCode === 'JP101' || user.loginCode === 'MG202') && d.getFullYear() === today.getFullYear() && d.getMonth() === 4 && d.getDate() === 8) {
         const clockInDate = new Date(d.getFullYear(), 4, 8, 21, 0, 0); // May 8th, 21:00
         const clockOutDate = new Date(d.getFullYear(), 4, 9, 5, 0, 0); // May 9th, 05:00
@@ -217,25 +152,22 @@ const generateMockReportData = (): ReportEntry[] => {
           employeeCode: user.loginCode,
           employeeName: `${user.name} ${user.surname}`,
           photoUrl: `https://placehold.co/40x40.png?text=${user.name[0]}${user.surname[0]}`,
-          date: formatDateForReport(clockInDate), // Date of clock-in
+          date: formatDateForReport(clockInDate),
           clockIn: formatTimeForReport(clockInDate),
           clockOut: formatTimeForReport(clockOutDate),
           hoursWorked: hoursWorkedStr,
           branch: user.branch,
           surchargeHours: surchargeHoursStr,
-          isHoliday: surchargeDetails.workedOnHoliday, // Checks if any part of shift was on holiday
+          isHoliday: surchargeDetails.workedOnHoliday,
+          observations: undefined,
         });
-        return; // Skip regular generation for this user on this day
+        return; 
       }
 
-
-      // Skip most Saturdays and Sundays for regular generation
-      if (dayOfWeek === 6) return; // Skip Saturday
+      if (dayOfWeek === 6) return; // Skip Saturday for regular generation
       if (dayOfWeek === 0 && Math.random() > 0.2) return; // 20% chance of working on Sunday for regular mock data
 
-
-      const isAbsent = Math.random() < 0.05 && !(d.getDay() === 0 && Math.random() <= 0.2) ; // 5% chance of being absent, less likely on a "worked" Sunday
-
+      const isAbsent = Math.random() < 0.05 && !(dayOfWeek === 0 && Math.random() <= 0.2); 
       let clockInDate: Date;
       let clockOutDate: Date;
       let hoursWorkedStr: string;
@@ -249,20 +181,19 @@ const generateMockReportData = (): ReportEntry[] => {
         surchargeHoursStr = '0h 0m';
         entryIsHoliday = isGivenDayHoliday(d);
       } else {
-        let clockInHourBase = 8; // Default clock-in base hour
+        let clockInHourBase = 8; 
         let workDurationHoursBase = 8;
 
-        // Simulate some Sunday shifts if dayOfWeek is 0 and not skipped by the 20% chance
-        if (dayOfWeek === 0) {
-            clockInHourBase = 9 + Math.floor(Math.random() * 3); // Clock in between 9-11 AM on Sundays
-            workDurationHoursBase = 6 + Math.random()*2; // 6-8 hours shift on Sunday
+        if (dayOfWeek === 0) { // Sunday shift
+            clockInHourBase = 9 + Math.floor(Math.random() * 3); 
+            workDurationHoursBase = 6 + Math.random()*2; 
         }
 
         const clockInHour = clockInHourBase + Math.floor(Math.random() * 2); 
         const clockInMinute = Math.floor(Math.random() * 60);
         clockInDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), clockInHour, clockInMinute);
         
-        const workDurationHours = workDurationHoursBase -0.5 + Math.random(); // e.g. 7.5 to 8.5 hours
+        const workDurationHours = workDurationHoursBase -0.5 + Math.random(); 
         clockOutDate = new Date(clockInDate.getTime() + workDurationHours * 60 * 60 * 1000);
         
         const actualHoursWorkedDecimal = calculateHoursWorkedDecimal(clockInDate, clockOutDate);
@@ -285,13 +216,15 @@ const generateMockReportData = (): ReportEntry[] => {
         branch: user.branch,
         surchargeHours: surchargeHoursStr,
         isHoliday: entryIsHoliday,
+        observations: undefined,
       });
     });
   }
   return data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || a.employeeName.localeCompare(b.employeeName));
 };
 
-const mockReportData: ReportEntry[] = generateMockReportData();
+// This constant is generated once when the module loads.
+const initialReportData: ReportEntry[] = generateMockReportData();
 
 interface TimeReportTableProps {
   startDate?: Date;
@@ -301,36 +234,62 @@ interface TimeReportTableProps {
 }
 
 export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch }: TimeReportTableProps) {
+  const [reportEntries, setReportEntries] = useState<ReportEntry[]>(initialReportData);
+  const { user } = useAppContext();
+  const { toast } = useToast();
+
+  // If the props for filtering change, reset reportEntries to a fresh filter of initialReportData
+  // This is to ensure that if filters change, we are not operating on a stale "audited" set.
+  // However, this might clear "Audited" tags if parent re-renders for other reasons.
+  // For simplicity now, we'll keep local state for 'Audited' and re-filter the current `reportEntries` state.
+  // A more robust system would handle this with a backend or more complex state management.
+
+
+  const handleEditLog = (entryId: string) => {
+    if (user?.role !== 'Administrator') {
+      toast({ title: "Permission Denied", description: "Only administrators can edit logs.", variant: "destructive" });
+      return;
+    }
+    setReportEntries(prevEntries =>
+      prevEntries.map(entry =>
+        entry.id === entryId ? { ...entry, observations: "Audited" } : entry
+      )
+    );
+    toast({
+      title: 'Log Audited (Mock)',
+      description: `Log ID ${entryId} has been marked as audited. Full edit functionality is pending.`,
+    });
+  };
   
-  const filteredData = mockReportData.filter(entry => {
-    // Entry date is YYYY-MM-DD. We need to parse it carefully to avoid timezone issues.
-    // Setting time to noon helps avoid DST or midnight issues with direct date comparisons.
-    const entryDateParts = entry.date.split('-').map(Number);
-    const entryDate = new Date(entryDateParts[0], entryDateParts[1] - 1, entryDateParts[2], 12, 0, 0);
-    
-    if (startDate) {
-        const filterStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
-        if (entryDate < filterStartDate) return false;
-    }
-    if (endDate) {
-        const filterEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
-        if (entryDate > filterEndDate) return false;
-    }
+  const filteredData = useMemo(() => {
+    return reportEntries.filter(entry => {
+      const entryDateParts = entry.date.split('-').map(Number);
+      const entryDate = new Date(entryDateParts[0], entryDateParts[1] - 1, entryDateParts[2], 12, 0, 0);
+      
+      if (startDate) {
+          const filterStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
+          if (entryDate < filterStartDate) return false;
+      }
+      if (endDate) {
+          const filterEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
+          if (entryDate > filterEndDate) return false;
+      }
 
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      const matchesSearch = 
-        entry.employeeName.toLowerCase().includes(lowerSearchTerm) ||
-        entry.employeeCode.toLowerCase().includes(lowerSearchTerm);
-      if (!matchesSearch) return false;
-    }
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        const matchesSearch = 
+          entry.employeeName.toLowerCase().includes(lowerSearchTerm) ||
+          entry.employeeCode.toLowerCase().includes(lowerSearchTerm);
+        if (!matchesSearch) return false;
+      }
 
-    if (selectedBranch && entry.branch !== selectedBranch) {
-      return false;
-    }
-    
-    return true;
-  });
+      if (selectedBranch && entry.branch !== selectedBranch) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [reportEntries, startDate, endDate, searchTerm, selectedBranch]);
 
   if (filteredData.length === 0) {
     return <p className="text-center text-muted-foreground py-8">No data available for the selected criteria.</p>;
@@ -350,6 +309,8 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
           <TableHead>Hours Worked</TableHead>
           <TableHead>Surcharge</TableHead> 
           <TableHead>Branch</TableHead>
+          <TableHead>Observations</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -384,6 +345,20 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
             </TableCell>
             <TableCell>{entry.surchargeHours}</TableCell> 
             <TableCell><Badge variant="outline">{entry.branch}</Badge></TableCell>
+            <TableCell>
+              {entry.observations ? (
+                <Badge variant="secondary">{entry.observations}</Badge>
+              ) : (
+                '-'
+              )}
+            </TableCell>
+            <TableCell className="text-right">
+              {user?.role === 'Administrator' && (
+                <Button variant="outline" size="sm" onClick={() => handleEditLog(entry.id)}>
+                  <Edit className="h-3 w-3 mr-1" /> Edit
+                </Button>
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
