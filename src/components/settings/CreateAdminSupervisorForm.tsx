@@ -16,8 +16,15 @@ import { useToast } from '@/hooks/use-toast';
 import { SheetClose } from '@/components/ui/sheet';
 import type { UserRole } from '@/contexts/AppContext';
 
+// Matches the structure expected by SettingsPage
+export interface NewAdminSupervisorData {
+  username: string;
+  role: Exclude<UserRole, 'Kiosk'>;
+  // Password is not returned, assumed handled by backend in real scenario
+}
+
 interface CreateAdminSupervisorFormProps {
-  onUserCreated?: () => void;
+  onUserCreated?: (userData: NewAdminSupervisorData) => void;
 }
 
 const ADMIN_SUPERVISOR_ROLES: Exclude<UserRole, 'Kiosk'>[] = ["Administrator", "Supervisor"];
@@ -39,23 +46,22 @@ export function CreateAdminSupervisorForm({ onUserCreated }: CreateAdminSupervis
       return;
     }
 
-    // Mock user creation
-    const newUser = { username, password, role: selectedRole };
-    console.log('Creating new admin/supervisor user:', newUser);
+    const newUser: NewAdminSupervisorData = { username, role: selectedRole };
+    console.log('Creating new admin/supervisor user (mock):', { ...newUser, password }); // Log with password for console only
 
     toast({
       title: 'Admin/Supervisor User Created (Mock)',
       description: `User ${username} with role ${selectedRole} has been added (mock).`,
     });
 
+    if (onUserCreated) {
+      onUserCreated(newUser);
+    }
+
     // Reset form
     setUsername('');
     setPassword('');
     setSelectedRole(undefined);
-
-    if (onUserCreated) {
-      onUserCreated();
-    }
   };
 
   return (
