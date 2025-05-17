@@ -18,7 +18,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Administrator', 'Supervisor', 'Kiosk'] },
-  { href: '/app/reports', label: 'Reports', icon: FileText, roles: ['Administrator', 'Supervisor'] },
+  { href: '/app/reports', label: 'User reports', icon: FileText, roles: ['Administrator', 'Supervisor'] },
   { href: '/app/manage-users', label: 'Manage Users', icon: Users, roles: ['Administrator'] },
   { href: '/app/settings', label: 'Settings', icon: Settings, roles: ['Administrator'] },
 ];
