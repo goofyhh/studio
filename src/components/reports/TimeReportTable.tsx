@@ -16,8 +16,14 @@ import Image from 'next/image';
 import { initialMockUsers, type UserEntry } from '@/components/users/ManageUsersPage';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, Flag } from 'lucide-react'; // Added Flag icon
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added DropdownMenu components
 
 interface ReportEntry {
   id: string;
@@ -31,12 +37,11 @@ interface ReportEntry {
   branch: string;
   surchargeHours: string; // Calculated extra hours
   isHoliday: boolean; // True if the work day was a Paraguayan holiday
-  observations?: string; // New field for "Audited" tag
+  observations?: string; 
 }
 
 // --- Helper Functions ---
 
-// Define Paraguayan Holidays (month is 0-indexed, day is 1-indexed)
 const paraguayanHolidays: Array<{ month: number; day: number; name: string }> = [
   { month: 0, day: 1, name: "New Year's Day" },   // New Year's Day (Jan 1)
   { month: 2, day: 1, name: "Heroes' Day" },   // Heroes' Day (Mar 1)
@@ -48,7 +53,6 @@ const paraguayanHolidays: Array<{ month: number; day: number; name: string }> = 
   { month: 8, day: 29, name: "Battle of Boquerón Victory" },  // Battle of Boquerón Victory (Sep 29)
   { month: 11, day: 8, name: "Virgin of Caacupé Day" },  // Virgin of Caacupé Day (Dec 8)
   { month: 11, day: 25, name: "Christmas Day" }, // Christmas Day (Dec 25)
-  // Good Friday and Holy Thursday are variable, not included for simplicity in mock data.
 ];
 
 function isGivenDayHoliday(date: Date): boolean {
@@ -58,7 +62,7 @@ function isGivenDayHoliday(date: Date): boolean {
 }
 
 function formatDecimalHoursToHM(decimalHours: number): string {
-  if (decimalHours < 0.001 && decimalHours > -0.001) return "0h 0m"; // Handle floating point for near-zero
+  if (decimalHours < 0.001 && decimalHours > -0.001) return "0h 0m"; 
   const sign = decimalHours < 0 ? "-" : "";
   const absDecimalHours = Math.abs(decimalHours);
   const totalMinutes = Math.round(absDecimalHours * 60);
@@ -67,12 +71,10 @@ function formatDecimalHoursToHM(decimalHours: number): string {
   return `${sign}${hours}h ${minutes}m`;
 }
 
-// Helper to format Date object to 'HH:MM AM/PM'
 function formatTimeForReport(date: Date): string {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-// Helper to format Date object to 'YYYY-MM-DD'
 function formatDateForReport(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -80,14 +82,12 @@ function formatDateForReport(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-// Helper to calculate hours worked as decimal
 function calculateHoursWorkedDecimal(clockInDate: Date, clockOutDate: Date): number {
   const diffMs = clockOutDate.getTime() - clockInDate.getTime();
   if (diffMs <= 0) return 0;
-  return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+  return diffMs / (1000 * 60 * 60); 
 }
 
-// Helper to calculate surcharge details
 function calculateSurchargeDetails(clockInDate: Date, clockOutDate: Date): { totalSurchargeDecimal: number; workedOnHoliday: boolean } {
   if (clockInDate.getTime() >= clockOutDate.getTime()) {
     return { totalSurchargeDecimal: 0, workedOnHoliday: isGivenDayHoliday(clockInDate) };
@@ -96,7 +96,7 @@ function calculateSurchargeDetails(clockInDate: Date, clockOutDate: Date): { tot
   let calculatedSurcharge = 0;
   let dayIsHoliday = false;
   const tempCurrentTime = new Date(clockInDate.getTime());
-  const intervalMillis = 1 * 60 * 1000; // 1 minute chunks
+  const intervalMillis = 1 * 60 * 1000; 
 
   while (tempCurrentTime < clockOutDate) {
     const minuteChunkEnd = new Date(Math.min(tempCurrentTime.getTime() + intervalMillis, clockOutDate.getTime()));
@@ -108,12 +108,12 @@ function calculateSurchargeDetails(clockInDate: Date, clockOutDate: Date): { tot
     const isHolidayFlag = isGivenDayHoliday(tempCurrentTime);
 
     if (isHolidayFlag) {
-      calculatedSurcharge += chunkDurationHours * 1.00; // 100% extra for holiday
+      calculatedSurcharge += chunkDurationHours * 1.00; 
       dayIsHoliday = true;
     } else if (dayOfWeek === 0) {
-      calculatedSurcharge += chunkDurationHours * 1.00; // 100% extra for Sunday
-    } else if (hour >= 20 || hour < 6) { // Night shift
-      calculatedSurcharge += chunkDurationHours * 0.50; // 50% extra for night
+      calculatedSurcharge += chunkDurationHours * 1.00; 
+    } else if (hour >= 20 || hour < 6) { 
+      calculatedSurcharge += chunkDurationHours * 0.50; 
     }
     tempCurrentTime.setTime(tempCurrentTime.getTime() + intervalMillis);
   }
@@ -128,19 +128,18 @@ const generateMockReportData = (): ReportEntry[] => {
   const activeUsers = initialMockUsers.filter(user => user.status === 'Active');
   
   const today = new Date();
-  const reportStartDate = new Date(today.getFullYear(), 4, 1); // May 1st of current year
+  const reportStartDate = new Date(today.getFullYear(), 4, 1); 
 
   const currentDateLimit = new Date(); 
 
   for (let d = new Date(reportStartDate); d <= currentDateLimit && d.getMonth() <= today.getMonth(); d.setDate(d.getDate() + 1)) {
-    const dayOfWeek = d.getDay(); // 0=Sunday, 6=Saturday
+    const dayOfWeek = d.getDay(); 
     const currentDateStr = formatDateForReport(d);
 
     activeUsers.forEach(user => {
-      // Specific night shift example for Juan Perez (JP101) and Maria Gonzalez (MG202)
       if ((user.loginCode === 'JP101' || user.loginCode === 'MG202') && d.getFullYear() === today.getFullYear() && d.getMonth() === 4 && d.getDate() === 8) {
-        const clockInDate = new Date(d.getFullYear(), 4, 8, 21, 0, 0); // May 8th, 21:00
-        const clockOutDate = new Date(d.getFullYear(), 4, 9, 5, 0, 0); // May 9th, 05:00
+        const clockInDate = new Date(d.getFullYear(), 4, 8, 21, 0, 0); 
+        const clockOutDate = new Date(d.getFullYear(), 4, 9, 5, 0, 0); 
 
         const actualHoursWorkedDecimal = calculateHoursWorkedDecimal(clockInDate, clockOutDate);
         const hoursWorkedStr = formatDecimalHoursToHM(actualHoursWorkedDecimal);
@@ -164,8 +163,8 @@ const generateMockReportData = (): ReportEntry[] => {
         return; 
       }
 
-      if (dayOfWeek === 6) return; // Skip Saturday for regular generation
-      if (dayOfWeek === 0 && Math.random() > 0.2) return; // 20% chance of working on Sunday for regular mock data
+      if (dayOfWeek === 6) return; 
+      if (dayOfWeek === 0 && Math.random() > 0.2) return; 
 
       const isAbsent = Math.random() < 0.05 && !(dayOfWeek === 0 && Math.random() <= 0.2); 
       let clockInDate: Date;
@@ -184,7 +183,7 @@ const generateMockReportData = (): ReportEntry[] => {
         let clockInHourBase = 8; 
         let workDurationHoursBase = 8;
 
-        if (dayOfWeek === 0) { // Sunday shift
+        if (dayOfWeek === 0) { 
             clockInHourBase = 9 + Math.floor(Math.random() * 3); 
             workDurationHoursBase = 6 + Math.random()*2; 
         }
@@ -223,7 +222,6 @@ const generateMockReportData = (): ReportEntry[] => {
   return data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || a.employeeName.localeCompare(b.employeeName));
 };
 
-// This constant is generated once when the module loads.
 const initialReportData: ReportEntry[] = generateMockReportData();
 
 interface TimeReportTableProps {
@@ -233,31 +231,51 @@ interface TimeReportTableProps {
   selectedBranch?: string;
 }
 
+const OBSERVATION_TAGS = ["Permiso", "Tardia", "Hs Extras", "Audited"];
+
 export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch }: TimeReportTableProps) {
   const [reportEntries, setReportEntries] = useState<ReportEntry[]>(initialReportData);
   const { user } = useAppContext();
   const { toast } = useToast();
-
-  // If the props for filtering change, reset reportEntries to a fresh filter of initialReportData
-  // This is to ensure that if filters change, we are not operating on a stale "audited" set.
-  // However, this might clear "Audited" tags if parent re-renders for other reasons.
-  // For simplicity now, we'll keep local state for 'Audited' and re-filter the current `reportEntries` state.
-  // A more robust system would handle this with a backend or more complex state management.
-
 
   const handleEditLog = (entryId: string) => {
     if (user?.role !== 'Administrator') {
       toast({ title: "Permission Denied", description: "Only administrators can edit logs.", variant: "destructive" });
       return;
     }
-    setReportEntries(prevEntries =>
-      prevEntries.map(entry =>
-        entry.id === entryId ? { ...entry, observations: "Audited" } : entry
-      )
-    );
+    handleFlagLog(entryId, "Audited"); // Use handleFlagLog to ensure consistent observation updates
     toast({
       title: 'Log Audited (Mock)',
       description: `Log ID ${entryId} has been marked as audited. Full edit functionality is pending.`,
+    });
+  };
+
+  const handleFlagLog = (entryId: string, flag: string) => {
+    if (user?.role !== 'Administrator') {
+      toast({ title: "Permission Denied", description: "Only administrators can flag logs.", variant: "destructive" });
+      return;
+    }
+    setReportEntries(prevEntries =>
+      prevEntries.map(entry => {
+        if (entry.id === entryId) {
+          let newObservations = entry.observations ? entry.observations.split(', ') : [];
+          // Ensure "Audited" is always first if present
+          if (flag === "Audited" && !newObservations.includes("Audited")) {
+            newObservations.unshift("Audited");
+          } else if (flag !== "Audited" && !newObservations.includes(flag)) {
+            newObservations.push(flag);
+          }
+          // Remove duplicates that might arise and filter out empty strings
+          newObservations = [...new Set(newObservations)].filter(obs => obs.trim() !== "");
+          
+          return { ...entry, observations: newObservations.join(', ') || undefined };
+        }
+        return entry;
+      })
+    );
+    toast({
+      title: 'Log Flagged',
+      description: `Log ID ${entryId} has been flagged with "${flag}".`,
     });
   };
   
@@ -310,7 +328,7 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
           <TableHead>Surcharge</TableHead> 
           <TableHead>Branch</TableHead>
           <TableHead>Observations</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="text-right min-w-[150px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -347,16 +365,40 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
             <TableCell><Badge variant="outline">{entry.branch}</Badge></TableCell>
             <TableCell>
               {entry.observations ? (
-                <Badge variant="secondary">{entry.observations}</Badge>
+                entry.observations.split(', ').map(obs => (
+                  <Badge key={obs} variant={OBSERVATION_TAGS.includes(obs) ? "secondary" : "outline"} className="mr-1 mb-1 whitespace-nowrap">
+                    {obs}
+                  </Badge>
+                ))
               ) : (
                 '-'
               )}
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell className="text-right space-x-1">
               {user?.role === 'Administrator' && (
-                <Button variant="outline" size="sm" onClick={() => handleEditLog(entry.id)}>
-                  <Edit className="h-3 w-3 mr-1" /> Edit
-                </Button>
+                <>
+                  <Button variant="outline" size="sm" onClick={() => handleEditLog(entry.id)} className="h-8 px-2">
+                    <Edit className="h-3 w-3 mr-1" /> Edit
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 px-2">
+                        <Flag className="h-3 w-3 mr-1" /> Flag
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Permiso')}>
+                        Permiso
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Tardia')}>
+                        Tardia
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Hs Extras')}>
+                        Hs Extras
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               )}
             </TableCell>
           </TableRow>
