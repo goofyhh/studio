@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"; // Added DropdownMenu components
+import { cn } from "@/lib/utils"; // Import cn for conditional classNames
 
 interface ReportEntry {
   id: string;
@@ -366,7 +367,14 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
             <TableCell>
               {entry.observations ? (
                 entry.observations.split(', ').map(obs => (
-                  <Badge key={obs} variant={OBSERVATION_TAGS.includes(obs) ? "secondary" : "outline"} className="mr-1 mb-1 whitespace-nowrap">
+                  <Badge
+                    key={obs}
+                    variant={obs === "Permiso" ? "default" : (OBSERVATION_TAGS.includes(obs) ? "secondary" : "outline")}
+                    className={cn(
+                      "mr-1 mb-1 whitespace-nowrap",
+                      obs === "Permiso" && "bg-green-600 hover:bg-green-700 text-primary-foreground"
+                    )}
+                  >
                     {obs}
                   </Badge>
                 ))
