@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Users, Building2, PlusCircle, PieChart as PieChartIcon } from 'lucide-react';
+import { FileText, Users, Building2, PlusCircle, PieChart as PieChartIcon, Clock10 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/sheet";
 import { CreateUserForm, POSITION_OPTIONS } from './CreateUserForm';
 import { BranchSelector, MOCK_BRANCHES } from '@/components/settings/BranchSelector';
-import { initialMockUsers, type UserEntry } from '@/components/users/ManageUsersPage'; // Import user data
+import { initialMockUsers, type UserEntry } from '@/components/users/ManageUsersPage'; 
+import { initialReportData, type ReportEntry } from '@/components/reports/TimeReportTable'; // Import report data
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
@@ -32,6 +33,22 @@ const CHART_COLORS = [
   'hsl(320, 65%, 55%)',
   'hsl(20, 75%, 58%)',
 ];
+
+function parseHoursStringToDecimal(hoursStr: string): number {
+  if (!hoursStr || hoursStr.includes('Absent') || hoursStr === 'N/A') {
+    return 0;
+  }
+  let totalHours = 0;
+  const hoursMatch = hoursStr.match(/(\d+)h/);
+  const minutesMatch = hoursStr.match(/(\d+)m/);
+  if (hoursMatch) {
+    totalHours += parseInt(hoursMatch[1], 10);
+  }
+  if (minutesMatch) {
+    totalHours += parseInt(minutesMatch[1], 10) / 60;
+  }
+  return totalHours;
+}
 
 export function AdminSupervisorDashboard() {
   const { user } = useAppContext();
@@ -86,6 +103,32 @@ export function AdminSupervisorDashboard() {
     });
     return config;
   }, [positionDistribution]);
+
+  const hoursByBranchDistribution = useMemo(() => {
+    const branchHours: Record<string, number> = {};
+    initialReportData.forEach(entry => {
+      const hours = parseHoursStringToDecimal(entry.hoursWorked);
+      branchHours[entry.branch] = (branchHours[entry.branch] || 0) + hours;
+    });
+    return Object.entries(branchHours)
+      .map(([name, value], index) => ({
+        name,
+        value: parseFloat(value.toFixed(2)),
+        fill: CHART_COLORS[index % CHART_COLORS.length],
+      }))
+      .filter(b => b.value > 0); // Only include branches with hours
+  }, []);
+
+  const hoursByBranchChartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    hoursByBranchDistribution.forEach(branch => {
+      config[branch.name] = {
+        label: `${branch.name} (${branch.value.toFixed(1)}h)`, // Show hours in legend label
+        color: branch.fill,
+      };
+    });
+    return config;
+  }, [hoursByBranchDistribution]);
 
 
   if (!user) {
@@ -318,8 +361,61 @@ export function AdminSupervisorDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Total Hours Worked by Branch Chart */}
+          <Card className="shadow-md hover:shadow-lg transition-shadow lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-lg font-medium flex items-center">
+                <Clock10 className="h-5 w-5 mr-2 text-primary" /> {/* Using Clock10 as an icon for hours */}
+                Total Hours Worked by Branch
+              </CardTitle>
+              <CardDescription>Distribution of total work hours across branches (based on report data).</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] md:h-[350px]">
+              {hoursByBranchDistribution.length > 0 ? (
+                <ChartContainer config={hoursByBranchChartConfig} className="w-full h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip
+                        cursor={{ fill: 'hsl(var(--muted))' }}
+                        content={<ChartTooltipContent formatter={(value, name, props) => `${props.payload.name}: ${Number(value).toFixed(1)} hours`} />}
+                      />
+                      <Legend contentStyle={{ fontSize: '12px' }} />
+                      <Pie
+                        data={hoursByBranchDistribution}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        labelLine={false}
+                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                          const RADIAN = Math.PI / 180;
+                          const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                          const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                          return (percent * 100) > 5 ? (
+                            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="12px">
+                              {`${(percent * 100).toFixed(0)}%`}
+                            </text>
+                          ) : null;
+                        }}
+                      >
+                        {hoursByBranchDistribution.map((entry, index) => (
+                          <Cell key={`cell-hours-${index}`} fill={entry.fill} stroke={entry.fill} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <p className="text-muted-foreground text-center pt-10">No work hour data available to display distribution.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
   );
 }
+

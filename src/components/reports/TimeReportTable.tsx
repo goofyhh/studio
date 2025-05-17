@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu"; // Added DropdownMenu components
 import { cn } from "@/lib/utils"; // Import cn for conditional classNames
 
-interface ReportEntry {
+export interface ReportEntry { // Export ReportEntry
   id: string;
   employeeCode: string;
   employeeName: string;
@@ -226,7 +226,7 @@ const generateMockReportData = (): ReportEntry[] => {
   return data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || a.employeeName.localeCompare(b.employeeName));
 };
 
-const initialReportData: ReportEntry[] = generateMockReportData();
+export const initialReportData: ReportEntry[] = generateMockReportData(); // Export this
 
 interface TimeReportTableProps {
   startDate?: Date;
