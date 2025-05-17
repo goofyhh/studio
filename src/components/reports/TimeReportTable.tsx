@@ -370,14 +370,14 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
                   <Badge
                     key={obs}
                     variant={
-                      (obs === "Permiso" || obs === "Tardia" || obs === "Hs Extras") ? "default" : 
-                      (OBSERVATION_TAGS.includes(obs) ? "secondary" : "outline")
+                       (obs === "Permiso" || obs === "Tardia" || obs === "Hs Extras" || obs === "Audited") ? "default" : "outline"
                     }
                     className={cn(
                       "mr-1 mb-1 whitespace-nowrap",
                       obs === "Permiso" && "bg-green-600 hover:bg-green-700 text-primary-foreground",
                       obs === "Tardia" && "bg-orange-500 hover:bg-orange-600 text-white",
-                      obs === "Hs Extras" && "bg-blue-500 hover:bg-blue-600 text-white"
+                      obs === "Hs Extras" && "bg-blue-500 hover:bg-blue-600 text-white",
+                      obs === "Audited" && "bg-gray-700 hover:bg-gray-800 text-white" // Dark gray for "black"
                     )}
                   >
                     {obs}
