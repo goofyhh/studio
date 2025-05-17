@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, FileText, Users, Building2, PlusCircle } from 'lucide-react'; // Changed UserPlus back to Users
+import { FileText, Users, Building2, PlusCircle } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -15,11 +15,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { CreateUserForm } from './CreateUserForm';
-import { MOCK_BRANCHES } from '@/components/settings/BranchSelector';
+import { BranchSelector, MOCK_BRANCHES } from '@/components/settings/BranchSelector'; // Import BranchSelector
 
 export function AdminSupervisorDashboard() {
   const { user } = useAppContext();
   const [isCreateUserSheetOpen, setIsCreateUserSheetOpen] = useState(false);
+  const [isManageKiosksSheetOpen, setIsManageKiosksSheetOpen] = useState(false); // State for Kiosks sheet
 
   if (!user) {
     return (
@@ -30,17 +31,6 @@ export function AdminSupervisorDashboard() {
   }
 
   const availableBranches = MOCK_BRANCHES;
-
-  // If the component was simplified for debugging, restore its intended content
-  if (user.name === "Simplified for Debugging") {
-     return (
-      <div>
-        <h1 className="text-3xl font-bold">Admin Dashboard (Simplified)</h1>
-        <p>This is a basic version for testing purposes.</p>
-      </div>
-    );
-  }
-
 
   return (
     <div className="space-y-8">
@@ -79,11 +69,28 @@ export function AdminSupervisorDashboard() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Configure kiosk branches and other system-wide parameters.
+                  Configure kiosk branches and add new ones.
                 </p>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={() => window.location.href = '/app/settings'}>Go to Settings</Button>
+                <Sheet open={isManageKiosksSheetOpen} onOpenChange={setIsManageKiosksSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button className="w-full" onClick={() => setIsManageKiosksSheetOpen(true)}>
+                      Configure Kiosks/Branches
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Kiosk Branch Configuration</SheetTitle>
+                      <SheetDescription>
+                        Select the branch for this kiosk or add new branches. Admin credentials are required to save changes.
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="py-4">
+                      <BranchSelector />
+                    </div>
+                  </SheetContent>
+                </Sheet>
               </CardFooter>
             </Card>
 
@@ -91,7 +98,7 @@ export function AdminSupervisorDashboard() {
             <Card className="shadow-md hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">Create Employee Users</CardTitle>
-                <Users className="h-6 w-6 text-primary" /> {/* Using Users icon as previously changed */}
+                <Users className="h-6 w-6 text-primary" />
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
