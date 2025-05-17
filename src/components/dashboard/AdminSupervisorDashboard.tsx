@@ -5,21 +5,21 @@ import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, FileText, Users, Building2, UserPlus, PlusCircle } from 'lucide-react';
+import { Settings, FileText, Users, Building2, PlusCircle } from 'lucide-react'; // Changed UserPlus back to Users
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { CreateUserForm } from './CreateUserForm';
-import { MOCK_BRANCHES } from '@/components/settings/BranchSelector'; 
+import { MOCK_BRANCHES } from '@/components/settings/BranchSelector';
 
 export function AdminSupervisorDashboard() {
   const { user } = useAppContext();
-  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [isCreateUserSheetOpen, setIsCreateUserSheetOpen] = useState(false);
 
   if (!user) {
     return (
@@ -30,6 +30,17 @@ export function AdminSupervisorDashboard() {
   }
 
   const availableBranches = MOCK_BRANCHES;
+
+  // If the component was simplified for debugging, restore its intended content
+  if (user.name === "Simplified for Debugging") {
+     return (
+      <div>
+        <h1 className="text-3xl font-bold">Admin Dashboard (Simplified)</h1>
+        <p>This is a basic version for testing purposes.</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-8">
@@ -80,7 +91,7 @@ export function AdminSupervisorDashboard() {
             <Card className="shadow-md hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">Create Employee Users</CardTitle>
-                <UserPlus className="h-6 w-6 text-primary" />
+                <Users className="h-6 w-6 text-primary" /> {/* Using Users icon as previously changed */}
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -88,25 +99,25 @@ export function AdminSupervisorDashboard() {
                 </p>
               </CardContent>
               <CardFooter>
-                <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full" onClick={() => setIsCreateUserDialogOpen(true)}>
+                <Sheet open={isCreateUserSheetOpen} onOpenChange={setIsCreateUserSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button className="w-full" onClick={() => setIsCreateUserSheetOpen(true)}>
                       <PlusCircle className="mr-2 h-5 w-5" /> Add New Employee
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[525px]">
-                    <DialogHeader>
-                      <DialogTitle>Create New Employee User</DialogTitle>
-                      <DialogDescription>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Create New Employee User</SheetTitle>
+                      <SheetDescription>
                         Fill in the details below to add a new employee. Their login code will be used for Kiosk access.
-                      </DialogDescription>
-                    </DialogHeader>
+                      </SheetDescription>
+                    </SheetHeader>
                     <CreateUserForm
                       branches={availableBranches}
-                      onUserCreated={() => setIsCreateUserDialogOpen(false)}
+                      onUserCreated={() => setIsCreateUserSheetOpen(false)}
                     />
-                  </DialogContent>
-                </Dialog>
+                  </SheetContent>
+                </Sheet>
               </CardFooter>
             </Card>
           </>

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { DialogClose } from '@/components/ui/dialog';
+import { SheetClose } from '@/components/ui/sheet'; // Changed from DialogClose
 
 interface CreateUserFormProps {
   branches: string[];
@@ -122,9 +122,9 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
         </Select>
       </div>
       <div className="flex justify-end space-x-2 pt-4">
-         <DialogClose asChild>
+         <SheetClose asChild>
             <Button type="button" variant="outline">Cancel</Button>
-         </DialogClose>
+         </SheetClose>
         <Button type="submit">Create User</Button>
       </div>
     </form>
