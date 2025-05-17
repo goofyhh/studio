@@ -111,9 +111,9 @@ function calculateSurchargeDetails(clockInDate: Date, clockOutDate: Date): { tot
     if (isHolidayFlag) {
       calculatedSurcharge += chunkDurationHours * 1.00; 
       dayIsHoliday = true;
-    } else if (dayOfWeek === 0) {
+    } else if (dayOfWeek === 0) { // Sunday
       calculatedSurcharge += chunkDurationHours * 1.00; 
-    } else if (hour >= 20 || hour < 6) { 
+    } else if (hour >= 20 || hour < 6) { // Night hours (8 PM to 6 AM)
       calculatedSurcharge += chunkDurationHours * 0.50; 
     }
     tempCurrentTime.setTime(tempCurrentTime.getTime() + intervalMillis);
@@ -129,18 +129,19 @@ const generateMockReportData = (): ReportEntry[] => {
   const activeUsers = initialMockUsers.filter(user => user.status === 'Active');
   
   const today = new Date();
-  const reportStartDate = new Date(today.getFullYear(), 4, 1); 
+  const reportStartDate = new Date(today.getFullYear(), 4, 1); // May 1st of current year
 
-  const currentDateLimit = new Date(); 
+  const currentDateLimit = new Date(); // Iterate up to today
 
   for (let d = new Date(reportStartDate); d <= currentDateLimit && d.getMonth() <= today.getMonth(); d.setDate(d.getDate() + 1)) {
-    const dayOfWeek = d.getDay(); 
+    const dayOfWeek = d.getDay(); // 0 (Sun) to 6 (Sat)
     const currentDateStr = formatDateForReport(d);
 
     activeUsers.forEach(user => {
+      // Special case for night shift example May 8th 21:00 to May 9th 05:00
       if ((user.loginCode === 'JP101' || user.loginCode === 'MG202') && d.getFullYear() === today.getFullYear() && d.getMonth() === 4 && d.getDate() === 8) {
-        const clockInDate = new Date(d.getFullYear(), 4, 8, 21, 0, 0); 
-        const clockOutDate = new Date(d.getFullYear(), 4, 9, 5, 0, 0); 
+        const clockInDate = new Date(d.getFullYear(), 4, 8, 21, 0, 0); // May 8th, 9 PM
+        const clockOutDate = new Date(d.getFullYear(), 4, 9, 5, 0, 0); // May 9th, 5 AM
 
         const actualHoursWorkedDecimal = calculateHoursWorkedDecimal(clockInDate, clockOutDate);
         const hoursWorkedStr = formatDecimalHoursToHM(actualHoursWorkedDecimal);
@@ -152,7 +153,7 @@ const generateMockReportData = (): ReportEntry[] => {
           employeeCode: user.loginCode,
           employeeName: `${user.name} ${user.surname}`,
           photoUrl: `https://placehold.co/40x40.png?text=${user.name[0]}${user.surname[0]}`,
-          date: formatDateForReport(clockInDate),
+          date: formatDateForReport(clockInDate), // Use clock-in date for the entry's date
           clockIn: formatTimeForReport(clockInDate),
           clockOut: formatTimeForReport(clockOutDate),
           hoursWorked: hoursWorkedStr,
@@ -161,12 +162,14 @@ const generateMockReportData = (): ReportEntry[] => {
           isHoliday: surchargeDetails.workedOnHoliday,
           observations: undefined,
         });
-        return; 
+        return; // Skip regular generation for this user on May 8th
       }
 
-      if (dayOfWeek === 6) return; 
+      if (dayOfWeek === 6) return; // Skip Saturdays
+      // For Sundays, allow work for some, but less likely (e.g., 20% chance of working)
       if (dayOfWeek === 0 && Math.random() > 0.2) return; 
 
+      // Random chance of being absent (5% on weekdays, not applicable if it's a Sunday they *are* working)
       const isAbsent = Math.random() < 0.05 && !(dayOfWeek === 0 && Math.random() <= 0.2); 
       let clockInDate: Date;
       let clockOutDate: Date;
@@ -175,25 +178,25 @@ const generateMockReportData = (): ReportEntry[] => {
       let entryIsHoliday = false;
 
       if (isAbsent) {
-        clockInDate = new Date(d); 
+        clockInDate = new Date(d); // Use the current iteration day
         clockOutDate = new Date(d);
         hoursWorkedStr = '0h 0m - Absent';
         surchargeHoursStr = '0h 0m';
         entryIsHoliday = isGivenDayHoliday(d);
       } else {
-        let clockInHourBase = 8; 
-        let workDurationHoursBase = 8;
+        let clockInHourBase = 8; // Base clock-in hour for weekdays
+        let workDurationHoursBase = 8; // Base work duration for weekdays
 
-        if (dayOfWeek === 0) { 
-            clockInHourBase = 9 + Math.floor(Math.random() * 3); 
-            workDurationHoursBase = 6 + Math.random()*2; 
+        if (dayOfWeek === 0) { // If it's a Sunday they are working
+            clockInHourBase = 9 + Math.floor(Math.random() * 3); // Later start, e.g., 9 AM - 11 AM
+            workDurationHoursBase = 6 + Math.random()*2; // Shorter shift, e.g., 6-8 hours
         }
 
-        const clockInHour = clockInHourBase + Math.floor(Math.random() * 2); 
+        const clockInHour = clockInHourBase + Math.floor(Math.random() * 2); // Add 0 or 1 hour variation
         const clockInMinute = Math.floor(Math.random() * 60);
         clockInDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), clockInHour, clockInMinute);
         
-        const workDurationHours = workDurationHoursBase -0.5 + Math.random(); 
+        const workDurationHours = workDurationHoursBase -0.5 + Math.random(); // 7.5 to 8.5 hours (or adjusted for Sunday)
         clockOutDate = new Date(clockInDate.getTime() + workDurationHours * 60 * 60 * 1000);
         
         const actualHoursWorkedDecimal = calculateHoursWorkedDecimal(clockInDate, clockOutDate);
@@ -244,6 +247,7 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
       toast({ title: "Permission Denied", description: "Only administrators can edit logs.", variant: "destructive" });
       return;
     }
+    // For now, just mark as "Audited". Full edit functionality is complex.
     handleFlagLog(entryId, "Audited"); // Use handleFlagLog to ensure consistent observation updates
     toast({
       title: 'Log Audited (Mock)',
@@ -252,8 +256,8 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
   };
 
   const handleFlagLog = (entryId: string, flag: string) => {
-    if (user?.role !== 'Administrator') {
-      toast({ title: "Permission Denied", description: "Only administrators can flag logs.", variant: "destructive" });
+    if (user?.role !== 'Administrator' && user?.role !== 'Supervisor') {
+      toast({ title: "Permission Denied", description: "Only administrators or supervisors can flag logs.", variant: "destructive" });
       return;
     }
     setReportEntries(prevEntries =>
@@ -283,14 +287,15 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
   const filteredData = useMemo(() => {
     return reportEntries.filter(entry => {
       const entryDateParts = entry.date.split('-').map(Number);
-      const entryDate = new Date(entryDateParts[0], entryDateParts[1] - 1, entryDateParts[2], 12, 0, 0);
+      // Ensure month is 0-indexed for Date constructor (entryDateParts[1] - 1)
+      const entryDate = new Date(entryDateParts[0], entryDateParts[1] - 1, entryDateParts[2], 12, 0, 0); // Set to midday to avoid timezone issues with date-only comparisons
       
       if (startDate) {
-          const filterStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
+          const filterStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0); // Start of the day
           if (entryDate < filterStartDate) return false;
       }
       if (endDate) {
-          const filterEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
+          const filterEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59); // End of the day
           if (entryDate > filterEndDate) return false;
       }
 
@@ -355,7 +360,9 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
             <TableCell>{entry.clockIn}</TableCell>
             <TableCell>{entry.clockOut}</TableCell>
             <TableCell 
-              className={entry.isHoliday && !entry.hoursWorked.includes('Absent') ? 'text-red-600 font-semibold' : ''}
+              className={cn(
+                entry.isHoliday && !entry.hoursWorked.includes('Absent') && 'text-red-600 font-semibold'
+              )}
             >
               {entry.hoursWorked.includes('Absent') ? 
                 <Badge variant="destructive" className="whitespace-nowrap">{entry.hoursWorked}</Badge> : 
@@ -369,15 +376,14 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
                 entry.observations.split(', ').map(obs => (
                   <Badge
                     key={obs}
-                    variant={
-                       (obs === "Permiso" || obs === "Tardia" || obs === "Hs Extras" || obs === "Audited") ? "default" : "outline"
-                    }
+                    variant={"default"} 
                     className={cn(
                       "mr-1 mb-1 whitespace-nowrap",
                       obs === "Permiso" && "bg-green-600 hover:bg-green-700 text-primary-foreground",
                       obs === "Tardia" && "bg-orange-500 hover:bg-orange-600 text-white",
                       obs === "Hs Extras" && "bg-blue-500 hover:bg-blue-600 text-white",
-                      obs === "Audited" && "bg-gray-700 hover:bg-gray-800 text-white" // Dark gray for "black"
+                      obs === "Audited" && "bg-gray-700 hover:bg-gray-800 text-white",
+                      !["Permiso", "Tardia", "Hs Extras", "Audited"].includes(obs) && "bg-muted text-muted-foreground hover:bg-muted/80" // Fallback for other tags
                     )}
                   >
                     {obs}
@@ -389,29 +395,29 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
             </TableCell>
             <TableCell className="text-right space-x-1">
               {user?.role === 'Administrator' && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => handleEditLog(entry.id)} className="h-8 px-2">
-                    <Edit className="h-3 w-3 mr-1" /> Edit
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 px-2">
-                        <Flag className="h-3 w-3 mr-1" /> Flag
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Permiso')}>
-                        Permiso
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Tardia')}>
-                        Tardia
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Hs Extras')}>
-                        Hs Extras
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
+                <Button variant="outline" size="sm" onClick={() => handleEditLog(entry.id)} className="h-8 px-2">
+                  <Edit className="h-3 w-3 mr-1" /> Edit
+                </Button>
+              )}
+              {(user?.role === 'Administrator' || user?.role === 'Supervisor') && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 px-2">
+                      <Flag className="h-3 w-3 mr-1" /> Flag
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Permiso')}>
+                      Permiso
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Tardia')}>
+                      Tardia
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleFlagLog(entry.id, 'Hs Extras')}>
+                      Hs Extras
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </TableCell>
           </TableRow>
