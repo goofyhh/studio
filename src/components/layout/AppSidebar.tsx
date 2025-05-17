@@ -7,7 +7,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, FileText, Settings, Users, PieChart } from 'lucide-react'; // Added PieChart
+import { LayoutDashboard, FileText, Settings, Users, PieChart, DollarSign } from 'lucide-react'; // Added DollarSign
 
 interface NavItem {
   href: string;
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Administrator', 'Supervisor', 'Kiosk'] },
   { href: '/app/reports', label: 'Reports Users', icon: FileText, roles: ['Administrator', 'Supervisor'] },
   { href: '/app/branch-reports', label: 'Branch Hours Overview', icon: PieChart, roles: ['Administrator', 'Supervisor'] },
+  { href: '/app/reports-salaries', label: 'Reports Salaries', icon: DollarSign, roles: ['Administrator', 'Supervisor'] },
   { href: '/app/manage-users', label: 'Manage Users', icon: Users, roles: ['Administrator'] },
   { href: '/app/settings', label: 'Settings', icon: Settings, roles: ['Administrator'] },
 ];
@@ -64,4 +65,3 @@ export function AppSidebar() {
     </aside>
   );
 }
-
