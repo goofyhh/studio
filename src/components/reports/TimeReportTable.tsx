@@ -127,12 +127,19 @@ const generateMockReportData = (): ReportEntry[] => {
 
 const mockReportData: ReportEntry[] = generateMockReportData();
 
-export function TimeReportTable({ startDate, endDate }: { startDate?: Date, endDate?: Date }) {
-  const filteredData = mockReportData.filter(entry => {
-    const entryDate = new Date(entry.date);
-    // Adjust entryDate to midnight UTC to match startDate/endDate which are typically midnight local time
-    const entryDateUTC = new Date(Date.UTC(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate()));
+interface TimeReportTableProps {
+  startDate?: Date;
+  endDate?: Date;
+  searchTerm?: string;
+  selectedBranch?: string;
+}
 
+export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch }: TimeReportTableProps) {
+  
+  const filteredData = mockReportData.filter(entry => {
+    // Date filter
+    const entryDate = new Date(entry.date);
+    const entryDateUTC = new Date(Date.UTC(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate()));
     if (startDate) {
         const filterStartDateUTC = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
         if (entryDateUTC < filterStartDateUTC) return false;
@@ -141,11 +148,26 @@ export function TimeReportTable({ startDate, endDate }: { startDate?: Date, endD
         const filterEndDateUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()));
         if (entryDateUTC > filterEndDateUTC) return false;
     }
+
+    // Search term filter (employee name or code)
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      const matchesSearch = 
+        entry.employeeName.toLowerCase().includes(lowerSearchTerm) ||
+        entry.employeeCode.toLowerCase().includes(lowerSearchTerm);
+      if (!matchesSearch) return false;
+    }
+
+    // Branch filter
+    if (selectedBranch && entry.branch !== selectedBranch) {
+      return false;
+    }
+    
     return true;
   });
 
   if (filteredData.length === 0) {
-    return <p className="text-center text-muted-foreground py-8">No data available for the selected period.</p>;
+    return <p className="text-center text-muted-foreground py-8">No data available for the selected criteria.</p>;
   }
 
   return (
@@ -198,5 +220,3 @@ export function TimeReportTable({ startDate, endDate }: { startDate?: Date, endD
     </Table>
   );
 }
-
-    
