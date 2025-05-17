@@ -35,11 +35,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Users, PlusCircle, Edit3, UserX, UserCheck, Search, Filter } from "lucide-react";
-import { CreateUserForm, POSITION_OPTIONS } from '@/components/dashboard/CreateUserForm'; // Import POSITION_OPTIONS
+import { CreateUserForm, POSITION_OPTIONS } from '@/components/dashboard/CreateUserForm';
 import { MOCK_BRANCHES } from '@/components/settings/BranchSelector';
 import Image from 'next/image';
 
-export interface UserEntry { // Export UserEntry
+export interface UserEntry {
   id: string;
   name: string;
   surname: string;
@@ -49,7 +49,7 @@ export interface UserEntry { // Export UserEntry
   status: 'Active' | 'Suspended';
 }
 
-export const initialMockUsers: UserEntry[] = [ // Export initialMockUsers
+export const initialMockUsers: UserEntry[] = [
   { id: '1', name: 'Juan', surname: 'Perez', loginCode: 'JP101', position: 'Tienda', branch: 'PB Boggiani', status: 'Active' },
   { id: '2', name: 'Maria', surname: 'Gonzalez', loginCode: 'MG202', position: 'Playa', branch: 'PB Remanso', status: 'Active' },
   { id: '3', name: 'Carlos', surname: 'Lopez', loginCode: 'CL303', position: 'Supervisor', branch: 'PB Villa Hayes', status: 'Suspended' },
@@ -60,6 +60,11 @@ export const initialMockUsers: UserEntry[] = [ // Export initialMockUsers
   { id: '8', name: 'Sofia', surname: 'Diaz', loginCode: 'SD808', position: 'Capitan TDA', branch: 'PB Remanso', status: 'Active' },
   { id: '9', name: 'Diego', surname: 'Silva', loginCode: 'DS909', position: 'Capitan PLA', branch: 'PB Villa Hayes', status: 'Active' },
   { id: '10', name: 'Camila', surname: 'Vargas', loginCode: 'CV010', position: 'Otro', branch: 'CO San Lorenzo', status: 'Active' },
+  { id: '11', name: 'Roberto', surname: 'Jimenez', loginCode: 'RJ111', position: 'Tienda', branch: 'PB Mola Lopez', status: 'Active' },
+  { id: '12', name: 'Valeria', surname: 'Acosta', loginCode: 'VA212', position: 'Playa', branch: 'PB Villa Olimpia', status: 'Active' },
+  { id: '13', name: 'Fernando', surname: 'Benitez', loginCode: 'FB313', position: 'Supervisor', branch: 'PB Curva Meyer', status: 'Suspended' },
+  { id: '14', name: 'Gabriela', surname: 'Ramirez', loginCode: 'GR414', position: 'Administracion', branch: 'PS Benjamin', status: 'Active' },
+  { id: '15', name: 'Martin', surname: 'Sosa', loginCode: 'MS515', position: 'Chofer', branch: 'PB La Rural', status: 'Active' },
 ];
 
 const STATUS_OPTIONS: UserEntry['status'][] = ['Active', 'Suspended'];
@@ -77,6 +82,9 @@ export function ManageUsersPage() {
   const [branchFilter, setBranchFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [isCreateUserSheetOpen, setIsCreateUserSheetOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   if (user?.role !== 'Administrator') {
     return (
@@ -129,6 +137,14 @@ export function ManageUsersPage() {
     });
   }, [users, searchTerm, positionFilter, branchFilter, statusFilter]);
 
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage, rowsPerPage]);
+
+
   const availableBranches = MOCK_BRANCHES;
 
   return (
@@ -176,7 +192,10 @@ export function ManageUsersPage() {
                     type="text"
                     placeholder="Name, surname, or login code..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1); // Reset to first page on search
+                    }}
                     className="pl-10 w-full"
                   />
                 </div>
@@ -191,7 +210,10 @@ export function ManageUsersPage() {
                 <Label htmlFor="positionFilter">Filter by Position</Label>
                 <Select 
                   value={positionFilter || ALL_POSITIONS_VALUE} 
-                  onValueChange={(value) => setPositionFilter(value === ALL_POSITIONS_VALUE ? "" : value)}
+                  onValueChange={(value) => {
+                    setPositionFilter(value === ALL_POSITIONS_VALUE ? "" : value);
+                    setCurrentPage(1); // Reset to first page on filter change
+                  }}
                 >
                   <SelectTrigger id="positionFilter" className="w-full mt-1">
                     <SelectValue placeholder="All Positions" />
@@ -210,7 +232,10 @@ export function ManageUsersPage() {
                 <Label htmlFor="branchFilter">Filter by Branch</Label>
                 <Select 
                   value={branchFilter || ALL_BRANCHES_VALUE} 
-                  onValueChange={(value) => setBranchFilter(value === ALL_BRANCHES_VALUE ? "" : value)}
+                  onValueChange={(value) => {
+                    setBranchFilter(value === ALL_BRANCHES_VALUE ? "" : value);
+                    setCurrentPage(1); // Reset to first page on filter change
+                  }}
                 >
                   <SelectTrigger id="branchFilter" className="w-full mt-1">
                     <SelectValue placeholder="All Branches" />
@@ -229,7 +254,10 @@ export function ManageUsersPage() {
                 <Label htmlFor="statusFilter">Filter by Status</Label>
                 <Select 
                   value={statusFilter || ALL_STATUSES_VALUE} 
-                  onValueChange={(value) => setStatusFilter(value === ALL_STATUSES_VALUE ? "" : value)}
+                  onValueChange={(value) => {
+                    setStatusFilter(value === ALL_STATUSES_VALUE ? "" : value);
+                    setCurrentPage(1); // Reset to first page on filter change
+                  }}
                 >
                   <SelectTrigger id="statusFilter" className="w-full mt-1">
                     <SelectValue placeholder="All Statuses" />
@@ -264,7 +292,7 @@ export function ManageUsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((u) => (
+                  {paginatedUsers.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
                         <Image
@@ -321,6 +349,54 @@ export function ManageUsersPage() {
             </p>
           )}
           
+          {filteredUsers.length > 0 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="rowsPerPageSelect" className="text-sm font-medium">Rows per page:</Label>
+                <Select
+                  value={String(rowsPerPage)}
+                  onValueChange={(value) => {
+                    setRowsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger id="rowsPerPageSelect" className="w-[70px] h-8">
+                    <SelectValue placeholder={String(rowsPerPage)} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={String(pageSize)}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  Page {totalPages > 0 ? currentPage : 0} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1 || totalPages === 0}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 p-4 border border-dashed rounded-md bg-muted/30">
             <h3 className="text-lg font-semibold mb-2">Notes & Future Enhancements:</h3>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
@@ -334,3 +410,5 @@ export function ManageUsersPage() {
     </div>
   );
 }
+
+    
