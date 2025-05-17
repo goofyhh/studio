@@ -1,11 +1,12 @@
+
 "use client";
 
 import { useAppContext } from '@/contexts/AppContext';
-import { ClockInOutCard } from '@/components/kiosk/ClockInOutCard';
 import { AdminSupervisorDashboard } from '@/components/dashboard/AdminSupervisorDashboard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { KioskViewLayout } from '@/components/kiosk/KioskViewLayout'; // New Import
 
 export function DashboardPage() {
   const { user, isLoading, branch } = useAppContext();
@@ -43,7 +44,7 @@ export function DashboardPage() {
         </div>
       );
     }
-    return <ClockInOutCard />;
+    return <KioskViewLayout />; // Changed from ClockInOutCard
   }
 
   return <AdminSupervisorDashboard />;
