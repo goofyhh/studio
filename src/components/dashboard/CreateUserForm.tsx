@@ -20,17 +20,30 @@ interface CreateUserFormProps {
   onUserCreated?: () => void;
 }
 
+const POSITION_OPTIONS = [
+  "Tienda",
+  "Playa",
+  "Capitan TDA",
+  "Capitan PLA",
+  "Limpiadora",
+  "Supervisor",
+  "Mantenimiento",
+  "Chofer",
+  "Administracion",
+  "Otro"
+];
+
 export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps) {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [loginCode, setLoginCode] = useState('');
-  const [position, setPosition] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState<string | undefined>(undefined);
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !surname || !loginCode || !position || !selectedBranch) {
+    if (!name || !surname || !loginCode || !selectedPosition || !selectedBranch) {
       toast({
         title: 'Error',
         description: 'All fields are required.',
@@ -40,7 +53,7 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
     }
 
     // Mock user creation
-    const newUser = { name, surname, loginCode, position, branch: selectedBranch };
+    const newUser = { name, surname, loginCode, position: selectedPosition, branch: selectedBranch };
     console.log('Creating new user:', newUser);
 
     toast({
@@ -52,11 +65,11 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
     setName('');
     setSurname('');
     setLoginCode('');
-    setPosition('');
+    setSelectedPosition(undefined);
     setSelectedBranch(undefined);
 
     if (onUserCreated) {
-      onUserCreated(); 
+      onUserCreated();
     }
   };
 
@@ -79,7 +92,18 @@ export function CreateUserForm({ branches, onUserCreated }: CreateUserFormProps)
       </div>
       <div className="space-y-2">
         <Label htmlFor="position">Position</Label>
-        <Input id="position" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="e.g., Cashier, Guard" />
+        <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+          <SelectTrigger id="position" className="w-full">
+            <SelectValue placeholder="Select a position" />
+          </SelectTrigger>
+          <SelectContent>
+            {POSITION_OPTIONS.map((positionName) => (
+              <SelectItem key={positionName} value={positionName}>
+                {positionName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="branch">Branch</Label>
