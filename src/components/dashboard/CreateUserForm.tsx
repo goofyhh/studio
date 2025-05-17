@@ -20,7 +20,7 @@ interface CreateUserFormProps {
   onUserCreated?: () => void;
 }
 
-const POSITION_OPTIONS = [
+export const POSITION_OPTIONS = [ // Export POSITION_OPTIONS
   "Tienda",
   "Playa",
   "Capitan TDA",

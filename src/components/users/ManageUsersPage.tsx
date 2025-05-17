@@ -35,11 +35,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Users, PlusCircle, Edit3, UserX, UserCheck, Search, Filter } from "lucide-react";
-import { CreateUserForm } from '@/components/dashboard/CreateUserForm';
+import { CreateUserForm, POSITION_OPTIONS } from '@/components/dashboard/CreateUserForm'; // Import POSITION_OPTIONS
 import { MOCK_BRANCHES } from '@/components/settings/BranchSelector';
 import Image from 'next/image';
 
-interface UserEntry {
+export interface UserEntry { // Export UserEntry
   id: string;
   name: string;
   surname: string;
@@ -49,7 +49,7 @@ interface UserEntry {
   status: 'Active' | 'Suspended';
 }
 
-const initialMockUsers: UserEntry[] = [
+export const initialMockUsers: UserEntry[] = [ // Export initialMockUsers
   { id: '1', name: 'Juan', surname: 'Perez', loginCode: 'JP101', position: 'Tienda', branch: 'PB Boggiani', status: 'Active' },
   { id: '2', name: 'Maria', surname: 'Gonzalez', loginCode: 'MG202', position: 'Playa', branch: 'PB Remanso', status: 'Active' },
   { id: '3', name: 'Carlos', surname: 'Lopez', loginCode: 'CL303', position: 'Supervisor', branch: 'PB Villa Hayes', status: 'Suspended' },
@@ -60,19 +60,6 @@ const initialMockUsers: UserEntry[] = [
   { id: '8', name: 'Sofia', surname: 'Diaz', loginCode: 'SD808', position: 'Capitan TDA', branch: 'PB Remanso', status: 'Active' },
   { id: '9', name: 'Diego', surname: 'Silva', loginCode: 'DS909', position: 'Capitan PLA', branch: 'PB Villa Hayes', status: 'Active' },
   { id: '10', name: 'Camila', surname: 'Vargas', loginCode: 'CV010', position: 'Otro', branch: 'CO San Lorenzo', status: 'Active' },
-];
-
-const POSITION_OPTIONS = [
-  "Tienda",
-  "Playa",
-  "Capitan TDA",
-  "Capitan PLA",
-  "Limpiadora",
-  "Supervisor",
-  "Mantenimiento",
-  "Chofer",
-  "Administracion",
-  "Otro"
 ];
 
 const STATUS_OPTIONS: UserEntry['status'][] = ['Active', 'Suspended'];
