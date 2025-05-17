@@ -77,6 +77,10 @@ const POSITION_OPTIONS = [
 
 const STATUS_OPTIONS: UserEntry['status'][] = ['Active', 'Suspended'];
 
+const ALL_POSITIONS_VALUE = "all-positions";
+const ALL_BRANCHES_VALUE = "all-branches";
+const ALL_STATUSES_VALUE = "all-statuses";
+
 export function ManageUsersPage() {
   const { user } = useAppContext();
   const { toast } = useToast();
@@ -198,12 +202,15 @@ export function ManageUsersPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               <div>
                 <Label htmlFor="positionFilter">Filter by Position</Label>
-                <Select value={positionFilter} onValueChange={setPositionFilter}>
+                <Select 
+                  value={positionFilter || ALL_POSITIONS_VALUE} 
+                  onValueChange={(value) => setPositionFilter(value === ALL_POSITIONS_VALUE ? "" : value)}
+                >
                   <SelectTrigger id="positionFilter" className="w-full mt-1">
                     <SelectValue placeholder="All Positions" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Positions</SelectItem>
+                    <SelectItem value={ALL_POSITIONS_VALUE}>All Positions</SelectItem>
                     {POSITION_OPTIONS.map((position) => (
                       <SelectItem key={position} value={position}>
                         {position}
@@ -214,12 +221,15 @@ export function ManageUsersPage() {
               </div>
               <div>
                 <Label htmlFor="branchFilter">Filter by Branch</Label>
-                <Select value={branchFilter} onValueChange={setBranchFilter}>
+                <Select 
+                  value={branchFilter || ALL_BRANCHES_VALUE} 
+                  onValueChange={(value) => setBranchFilter(value === ALL_BRANCHES_VALUE ? "" : value)}
+                >
                   <SelectTrigger id="branchFilter" className="w-full mt-1">
                     <SelectValue placeholder="All Branches" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Branches</SelectItem>
+                    <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
                     {availableBranches.map((branch) => (
                       <SelectItem key={branch} value={branch}>
                         {branch}
@@ -230,12 +240,15 @@ export function ManageUsersPage() {
               </div>
               <div>
                 <Label htmlFor="statusFilter">Filter by Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select 
+                  value={statusFilter || ALL_STATUSES_VALUE} 
+                  onValueChange={(value) => setStatusFilter(value === ALL_STATUSES_VALUE ? "" : value)}
+                >
                   <SelectTrigger id="statusFilter" className="w-full mt-1">
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
                     {STATUS_OPTIONS.map((status) => (
                       <SelectItem key={status} value={status}>
                         {status}
