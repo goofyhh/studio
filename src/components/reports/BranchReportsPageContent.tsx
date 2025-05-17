@@ -12,12 +12,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'; // Added Select
-import { PieChart as PieChartIcon, CalendarIcon as CalendarLucideIcon, Clock10, Filter } from 'lucide-react'; // Added Filter
+} from '@/components/ui/select';
+import { PieChart as PieChartIcon, CalendarIcon as CalendarLucideIcon, Clock10 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { initialReportData, type ReportEntry } from '@/components/reports/TimeReportTable';
-import { MOCK_BRANCHES } from '@/components/settings/BranchSelector'; // Import MOCK_BRANCHES
+import { initialReportData, type ReportEntry } from '@/components/reports/TimeReportTable'; // Ensure ReportEntry includes 'position'
+import { MOCK_BRANCHES } from '@/components/settings/BranchSelector';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 
@@ -59,9 +59,7 @@ export function BranchReportsPageContent() {
   const [endDate, setEndDate] = useState<Date | undefined>(today);
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>(ALL_BRANCHES_FILTER_VALUE);
 
-  const hoursByBranchDistribution = useMemo(() => {
-    const branchHours: Record<string, number> = {};
-
+  const chartDataDistribution = useMemo(() => {
     let dataToProcess = initialReportData;
 
     // Filter by date
@@ -81,35 +79,49 @@ export function BranchReportsPageContent() {
       return true;
     });
 
-    // Filter by branch if a specific branch is selected
-    if (selectedBranchFilter !== ALL_BRANCHES_FILTER_VALUE) {
-      dataToProcess = dataToProcess.filter(entry => entry.branch === selectedBranchFilter);
+    if (selectedBranchFilter === ALL_BRANCHES_FILTER_VALUE) {
+      // Group by branch
+      const branchHours: Record<string, number> = {};
+      dataToProcess.forEach(entry => {
+        const hours = parseHoursStringToDecimal(entry.hoursWorked);
+        branchHours[entry.branch] = (branchHours[entry.branch] || 0) + hours;
+      });
+      return Object.entries(branchHours)
+        .map(([name, value], index) => ({
+          name, // Branch name
+          value: parseFloat(value.toFixed(2)),
+          fill: CHART_COLORS[index % CHART_COLORS.length],
+        }))
+        .filter(b => b.value > 0);
+    } else {
+      // A specific branch is selected. Filter by this branch first.
+      const branchSpecificData = dataToProcess.filter(entry => entry.branch === selectedBranchFilter);
+      // Then, group by position.
+      const positionHours: Record<string, number> = {};
+      branchSpecificData.forEach(entry => {
+        const hours = parseHoursStringToDecimal(entry.hoursWorked);
+        positionHours[entry.position] = (positionHours[entry.position] || 0) + hours;
+      });
+      return Object.entries(positionHours)
+        .map(([name, value], index) => ({
+          name, // Position name
+          value: parseFloat(value.toFixed(2)),
+          fill: CHART_COLORS[index % CHART_COLORS.length],
+        }))
+        .filter(p => p.value > 0);
     }
-    
-    dataToProcess.forEach(entry => {
-      const hours = parseHoursStringToDecimal(entry.hoursWorked);
-      branchHours[entry.branch] = (branchHours[entry.branch] || 0) + hours;
-    });
-
-    return Object.entries(branchHours)
-      .map(([name, value], index) => ({
-        name,
-        value: parseFloat(value.toFixed(2)),
-        fill: CHART_COLORS[index % CHART_COLORS.length],
-      }))
-      .filter(b => b.value > 0);
   }, [startDate, endDate, selectedBranchFilter]);
 
-  const hoursByBranchChartConfig = useMemo(() => {
+  const dynamicChartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    hoursByBranchDistribution.forEach(branch => {
-      config[branch.name] = {
-        label: `${branch.name} (${branch.value.toFixed(1)}h)`,
-        color: branch.fill,
+    chartDataDistribution.forEach(item => { // item.name will be branch or position
+      config[item.name] = {
+        label: `${item.name} (${item.value.toFixed(1)}h)`,
+        color: item.fill,
       };
     });
     return config;
-  }, [hoursByBranchDistribution]);
+  }, [chartDataDistribution]);
 
   const availableBranches = MOCK_BRANCHES;
 
@@ -118,10 +130,16 @@ export function BranchReportsPageContent() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl flex items-center">
-            <Clock10 className="mr-3 h-8 w-8 text-primary" />
-            Branch Hours Overview
+            <PieChartIcon className="mr-3 h-8 w-8 text-primary" />
+            {selectedBranchFilter === ALL_BRANCHES_FILTER_VALUE 
+              ? "Branch Hours Overview" 
+              : `Position Hours for ${selectedBranchFilter}`}
           </CardTitle>
-          <CardDescription>Distribution of total work hours by branch for the selected period and branch filter.</CardDescription>
+          <CardDescription>
+            {selectedBranchFilter === ALL_BRANCHES_FILTER_VALUE
+              ? "Distribution of total work hours by branch for the selected period."
+              : `Distribution of total work hours by position for branch "${selectedBranchFilter}" for the selected period.`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6 p-4 border rounded-md bg-muted/20">
@@ -198,8 +216,8 @@ export function BranchReportsPageContent() {
             </div>
           </div>
           <div className="h-[400px] md:h-[500px] w-full">
-            {hoursByBranchDistribution.length > 0 ? (
-              <ChartContainer config={hoursByBranchChartConfig} className="w-full h-full">
+            {chartDataDistribution.length > 0 ? (
+              <ChartContainer config={dynamicChartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Tooltip
@@ -208,33 +226,31 @@ export function BranchReportsPageContent() {
                     />
                     <Legend contentStyle={{ fontSize: '14px' }} wrapperStyle={{paddingTop: '20px'}} />
                     <Pie
-                      data={hoursByBranchDistribution}
+                      data={chartDataDistribution}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={selectedBranchFilter !== ALL_BRANCHES_FILTER_VALUE && hoursByBranchDistribution.length === 1 ? 120 : 150} // Make single slice larger
+                      outerRadius={150} 
                       labelLine={false}
-                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                         const RADIAN = Math.PI / 180;
                         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
                         const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                        const showLabel = (percent * 100) > 3 || (selectedBranchFilter !== ALL_BRANCHES_FILTER_VALUE && hoursByBranchDistribution.length === 1);
+                        const showLabel = (percent * 100) > 5;
                         
                         if (!showLabel) return null;
 
                         return (
                           <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="12px">
-                            {selectedBranchFilter !== ALL_BRANCHES_FILTER_VALUE && hoursByBranchDistribution.length === 1 
-                              ? `${name} (${(percent * 100).toFixed(0)}%)` 
-                              : `${(percent * 100).toFixed(0)}%`}
+                             {`${(percent * 100).toFixed(0)}%`}
                           </text>
                         );
                       }}
                     >
-                      {hoursByBranchDistribution.map((entry, index) => (
-                        <Cell key={`cell-hours-${index}`} fill={entry.fill} stroke={entry.fill} />
+                      {chartDataDistribution.map((entry, index) => (
+                        <Cell key={`cell-data-${index}`} fill={entry.fill} stroke={entry.fill} />
                       ))}
                     </Pie>
                   </PieChart>
@@ -242,7 +258,8 @@ export function BranchReportsPageContent() {
               </ChartContainer>
             ) : (
               <p className="text-muted-foreground text-center pt-20 text-lg">
-                No work hour data for the selected date range {selectedBranchFilter !== ALL_BRANCHES_FILTER_VALUE ? `and branch (${selectedBranchFilter})` : ''}.
+                No work hour data for the selected criteria
+                {selectedBranchFilter !== ALL_BRANCHES_FILTER_VALUE ? ` for branch "${selectedBranchFilter}"` : ''}.
               </p>
             )}
           </div>
@@ -251,4 +268,3 @@ export function BranchReportsPageContent() {
     </div>
   );
 }
-
