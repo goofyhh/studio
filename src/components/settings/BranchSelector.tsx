@@ -39,7 +39,8 @@ export const MOCK_BRANCHES = [
   "PB Km9",
   "PS Mariano",
   "PS Benjamin",
-  "CO San Lorenzo"
+  "CO San Lorenzo",
+  "CE Vientos del Chaco" // Added new branch
 ];
 export const MOCK_ADMIN_PASSWORD = "0000"; // Export this
 
