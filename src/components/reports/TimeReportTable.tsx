@@ -1,7 +1,8 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React from 'react'; // Removed useState, useMemo, useEffect
+import type { UserRole } from '@/contexts/AppContext'; // For userRole prop
 import {
   Table,
   TableBody,
@@ -13,11 +14,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Image from 'next/image';
-import { initialMockUsers, type UserEntry } from '@/components/users/ManageUsersPage';
-import { useAppContext } from '@/contexts/AppContext';
+import { initialMockUsers } from '@/components/users/ManageUsersPage'; // type UserEntry removed, not needed directly here
 import { Button } from '@/components/ui/button';
 import { Edit, Flag } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+// Removed useToast as it's handled by parent
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +30,7 @@ export interface ReportEntry {
   id: string;
   employeeCode: string;
   employeeName: string;
-  position: string; // Added position
+  position: string;
   photoUrl?: string;
   date: string; // YYYY-MM-DD
   clockIn: string; // HH:MM AM/PM
@@ -41,8 +41,6 @@ export interface ReportEntry {
   observations?: string;
   branch: string;
 }
-
-// --- Helper Functions ---
 
 const paraguayanHolidays: Array<{ month: number; day: number; name: string }> = [
   { month: 0, day: 1, name: "New Year's Day" },
@@ -63,7 +61,7 @@ function isGivenDayHoliday(date: Date): boolean {
   return paraguayanHolidays.some(h => h.month === month && h.day === day);
 }
 
-export function parseHoursStringToDecimal(hoursStr: string): number { // Export for potential reuse
+export function parseHoursStringToDecimal(hoursStr: string): number {
   if (!hoursStr || hoursStr.includes('Absent') || hoursStr === 'N/A') {
     return 0;
   }
@@ -79,8 +77,8 @@ export function parseHoursStringToDecimal(hoursStr: string): number { // Export 
   return totalHours;
 }
 
-export function formatDecimalHoursToHM(decimalHours: number): string { // Export for potential reuse
-  if (decimalHours <= 0.001 && decimalHours >= -0.001) return "0h 0m"; // Handle near-zero as 0h 0m
+export function formatDecimalHoursToHM(decimalHours: number): string {
+  if (decimalHours <= 0.001 && decimalHours >= -0.001) return "0h 0m";
   const sign = decimalHours < 0 ? "-" : "";
   const absDecimalHours = Math.abs(decimalHours);
   const totalMinutes = Math.round(absDecimalHours * 60);
@@ -168,7 +166,7 @@ const generateMockReportData = (): ReportEntry[] => {
           id: String(entryId++),
           employeeCode: user.loginCode,
           employeeName: `${user.name} ${user.surname}`,
-          position: user.position, // Added position
+          position: user.position,
           photoUrl: `https://placehold.co/40x40.png?text=${user.name[0]}${user.surname[0]}`,
           date: formatDateForReport(clockInDate),
           clockIn: formatTimeForReport(clockInDate),
@@ -226,7 +224,7 @@ const generateMockReportData = (): ReportEntry[] => {
         id: String(entryId++),
         employeeCode: user.loginCode,
         employeeName: `${user.name} ${user.surname}`,
-        position: user.position, // Added position
+        position: user.position,
         photoUrl: `https://placehold.co/40x40.png?text=${user.name[0]}${user.surname[0]}`,
         date: currentDateStr,
         clockIn: isAbsent ? 'N/A' : formatTimeForReport(clockInDate),
@@ -245,96 +243,28 @@ const generateMockReportData = (): ReportEntry[] => {
 export const initialReportData: ReportEntry[] = generateMockReportData();
 
 interface TimeReportTableProps {
-  startDate?: Date;
-  endDate?: Date;
-  searchTerm?: string;
-  selectedBranch?: string;
+  data: ReportEntry[];
+  totalFilteredEntries: number;
+  onEditLog: (entryId: string) => void;
+  onFlagLog: (entryId: string, flag: string) => void;
+  userRole: UserRole | null;
 }
 
 const OBSERVATION_TAGS = ["Permiso", "Tardia", "Hs Extras", "Audited"];
 
-export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch }: TimeReportTableProps) {
-  const [reportEntries, setReportEntries] = useState<ReportEntry[]>(initialReportData);
-  const { user } = useAppContext();
-  const { toast } = useToast();
+export function TimeReportTable({ data, totalFilteredEntries, onEditLog, onFlagLog, userRole }: TimeReportTableProps) {
 
-  const handleEditLog = (entryId: string) => {
-    if (user?.role !== 'Administrator') {
-      toast({ title: "Permission Denied", description: "Only administrators can edit logs.", variant: "destructive" });
-      return;
-    }
-    handleFlagLog(entryId, "Audited");
-    toast({
-      title: 'Log Audited (Mock)',
-      description: `Log ID ${entryId} has been marked as audited. Full edit functionality is pending.`,
-    });
-  };
-
-  const handleFlagLog = (entryId: string, flag: string) => {
-    if (user?.role !== 'Administrator' && user?.role !== 'Supervisor') {
-      toast({ title: "Permission Denied", description: "Only administrators or supervisors can flag logs.", variant: "destructive" });
-      return;
-    }
-    setReportEntries(prevEntries =>
-      prevEntries.map(entry => {
-        if (entry.id === entryId) {
-          let newObservations = entry.observations ? entry.observations.split(', ') : [];
-          if (flag === "Audited" && !newObservations.includes("Audited")) {
-            newObservations.unshift("Audited");
-          } else if (flag !== "Audited" && !newObservations.includes(flag)) {
-            newObservations.push(flag);
-          }
-          newObservations = [...new Set(newObservations)].filter(obs => obs.trim() !== "");
-          
-          return { ...entry, observations: newObservations.join(', ') || undefined };
-        }
-        return entry;
-      })
-    );
-    toast({
-      title: 'Log Flagged',
-      description: `Log ID ${entryId} has been flagged with "${flag}".`,
-    });
-  };
-  
-  const filteredData = useMemo(() => {
-    return reportEntries.filter(entry => {
-      const entryDateParts = entry.date.split('-').map(Number);
-      const entryDate = new Date(entryDateParts[0], entryDateParts[1] - 1, entryDateParts[2], 12, 0, 0);
-      
-      if (startDate) {
-          const filterStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
-          if (entryDate < filterStartDate) return false;
-      }
-      if (endDate) {
-          const filterEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
-          if (entryDate > filterEndDate) return false;
-      }
-
-      if (searchTerm) {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        const matchesSearch = 
-          entry.employeeName.toLowerCase().includes(lowerSearchTerm) ||
-          entry.employeeCode.toLowerCase().includes(lowerSearchTerm) ||
-          entry.position.toLowerCase().includes(lowerSearchTerm); // Added position to search
-        if (!matchesSearch) return false;
-      }
-
-      if (selectedBranch && entry.branch !== selectedBranch) {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [reportEntries, startDate, endDate, searchTerm, selectedBranch]);
-
-  if (filteredData.length === 0) {
+  if (data.length === 0 && totalFilteredEntries === 0) {
     return <p className="text-center text-muted-foreground py-8">No data available for the selected criteria.</p>;
   }
+  if (data.length === 0 && totalFilteredEntries > 0) {
+     return <p className="text-center text-muted-foreground py-8">No data on this page. Try adjusting pagination or filters.</p>;
+  }
+
 
   return (
     <Table>
-      <TableCaption>A list of clock-in/out records. Found {filteredData.length} entries.</TableCaption>
+      <TableCaption>Found {totalFilteredEntries} entries matching your criteria.</TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead className="w-[80px]">Photo</TableHead>
@@ -353,13 +283,11 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredData.map((entry) => {
+        {data.map((entry) => {
           const totalDurationDecimal = parseHoursStringToDecimal(entry.hoursWorked);
           const surchargeDecimal = parseHoursStringToDecimal(entry.surchargeHours);
           let regularHoursDecimal = totalDurationDecimal - surchargeDecimal;
-          // Ensure regular hours are not negative if total duration is 0 (e.g. Absent)
           if (totalDurationDecimal === 0) regularHoursDecimal = 0;
-
 
           return (
             <TableRow key={entry.id}>
@@ -421,12 +349,12 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
                 )}
               </TableCell>
               <TableCell className="text-right space-x-1">
-                {user?.role === 'Administrator' && (
-                  <Button variant="outline" size="sm" onClick={() => handleEditLog(entry.id)} className="h-8 px-2">
+                {userRole === 'Administrator' && (
+                  <Button variant="outline" size="sm" onClick={() => onEditLog(entry.id)} className="h-8 px-2">
                     <Edit className="h-3 w-3 mr-1" /> Edit
                   </Button>
                 )}
-                {(user?.role === 'Administrator' || user?.role === 'Supervisor') && (
+                {(userRole === 'Administrator' || userRole === 'Supervisor') && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-8 px-2">
@@ -435,7 +363,7 @@ export function TimeReportTable({ startDate, endDate, searchTerm, selectedBranch
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {OBSERVATION_TAGS.filter(tag => tag !== "Audited").map(tag => (
-                         <DropdownMenuItem key={tag} onClick={() => handleFlagLog(entry.id, tag)}>
+                         <DropdownMenuItem key={tag} onClick={() => onFlagLog(entry.id, tag)}>
                            {tag}
                          </DropdownMenuItem>
                       ))}
