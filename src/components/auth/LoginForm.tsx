@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { UserRole } from '@/contexts/AppContext';
@@ -32,24 +31,17 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
         toast({ title: "Error", description: "Please enter an Employee Code.", variant: "destructive" });
         return;
       }
-    } else if (role === 'Administrator') {
+    } else if (role === 'Administrator' || role === 'Supervisor') {
       if (!identifier || !password) {
         toast({ title: "Error", description: "Please enter Username and Password.", variant: "destructive" });
         return;
       }
       // Specific credential check for Administrator
-      if (identifier.toLowerCase() !== 'admin' || password !== '0000') {
+      if (role === 'Administrator' && (identifier.toLowerCase() !== 'admin' || password !== '0000')) {
         toast({ title: "Error", description: "Invalid username or password.", variant: "destructive" });
         return;
       }
-    } else if (role === 'Supervisor') {
-      if (!identifier || !password) {
-         toast({ title: "Error", description: "Please enter Username and Password.", variant: "destructive" });
-        return;
-      }
-      // Supervisor logs in with any non-empty username/password (mock authentication)
     }
-
     login(role, identifier);
     toast({ title: "Login Successful", description: `Welcome!` }); // Simplified welcome message
     if (onLoginSuccess) {
