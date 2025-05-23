@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { KeyRound, User, Building } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 interface LoginFormProps {
   role: UserRole;
@@ -24,6 +25,7 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (role === 'Kiosk') {
@@ -112,6 +114,22 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
                     autoComplete="current-password"
                   />
                 </div>
+              </div>
+            </>
+          )}
+          <Button type="submit" className="w-full text-lg py-6">
+            Login
+          </Button>
+        </form>
+      </CardContent>
+      {role !== 'Kiosk' && (
+         <CardFooter className="text-xs text-muted-foreground justify-center">
+            <p>Ensure you are authorized before proceeding.</p>
+         </CardFooter>
+      )}
+    </Card>
+  );
+}
               </div>
             </>
           )}
