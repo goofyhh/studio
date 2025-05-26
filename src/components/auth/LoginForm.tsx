@@ -24,7 +24,6 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
   const { login } = useAppContext();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -38,18 +37,23 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
         toast({ title: "Error", description: "Please enter Username and Password.", variant: "destructive" });
         return;
       }
-      // Specific credential check for Administrator
-      if (role === 'Administrator' && (identifier.toLowerCase() !== 'admin' || password !== '0000')) {
-        toast({ title: "Error", description: "Invalid username or password.", variant: "destructive" });
-        return;
-      }
-    }
+
+      try {
+        const response = await axios.post('/api/login', { username: identifier, password });
+        if (response.data.success) {
     login(role, identifier);
-    toast({ title: "Login Successful", description: `Welcome!` }); // Simplified welcome message
+          toast({ title: "Login Successful", description: `Welcome!` });
     if (onLoginSuccess) {
       onLoginSuccess();
     }
     router.push('/app/dashboard');
+        } else {
+          toast({ title: "Error", description: response.data.message, variant: "destructive" });
+        }
+      } catch (error) {
+        toast({ title: "Error", description: "Login failed. Please try again.", variant: "destructive" });
+      }
+    }
   };
 
   return (
@@ -114,22 +118,6 @@ export function LoginForm({ role, onLoginSuccess }: LoginFormProps) {
                     autoComplete="current-password"
                   />
                 </div>
-              </div>
-            </>
-          )}
-          <Button type="submit" className="w-full text-lg py-6">
-            Login
-          </Button>
-        </form>
-      </CardContent>
-      {role !== 'Kiosk' && (
-         <CardFooter className="text-xs text-muted-foreground justify-center">
-            <p>Ensure you are authorized before proceeding.</p>
-         </CardFooter>
-      )}
-    </Card>
-  );
-}
               </div>
             </>
           )}
